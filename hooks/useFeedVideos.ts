@@ -1,0 +1,165 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Video } from '@/types/database'
+
+// Seed videos used for initial render before Supabase loads
+export const SEED_VIDEOS: Video[] = [
+  {
+    id: '30000000-0000-0000-0000-000000000001',
+    user_id: '00000000-0000-0000-0000-000000000001',
+    title: null,
+    caption: 'Exploring the hidden gems of Tokyo 🇯🇵✨ Drop a 🗾 if you want a full guide! #travel #japan #fyp #viral',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    thumbnail_url: 'https://picsum.photos/seed/tokyo/1080/1920',
+    duration: 15,
+    width: 1080,
+    height: 1920,
+    like_count: 284500,
+    comment_count: 3420,
+    share_count: 18900,
+    view_count: 1250000,
+    bookmark_count: 12000,
+    status: 'ready',
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    scheduled_at: null,
+    published_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000001',
+      clerk_id: 'user_demo1',
+      username: 'alexcreates',
+      display_name: 'Alex Creates',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
+      bio: 'Content creator 🎬 | Travel & Food',
+      website: null,
+      is_verified: true,
+      is_seller: false,
+      follower_count: 128500,
+      following_count: 342,
+      video_count: 87,
+      like_count: 2840000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000002',
+    user_id: '00000000-0000-0000-0000-000000000002',
+    title: null,
+    caption: 'GRWM for New York Fashion Week 👗💅 This look took 2 hours but SO worth it! #fashion #grwm #nyfw #style',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnail_url: 'https://picsum.photos/seed/fashion/1080/1920',
+    duration: 28,
+    width: 1080,
+    height: 1920,
+    like_count: 189200,
+    comment_count: 5670,
+    share_count: 12400,
+    view_count: 890000,
+    bookmark_count: 8900,
+    status: 'ready',
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    scheduled_at: null,
+    published_at: new Date(Date.now() - 86400000).toISOString(),
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 86400000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000002',
+      clerk_id: 'user_demo2',
+      username: 'sarahstyle',
+      display_name: 'Sarah Style',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
+      bio: 'Fashion & Beauty 💄 | New York',
+      website: null,
+      is_verified: true,
+      is_seller: true,
+      follower_count: 89200,
+      following_count: 1200,
+      video_count: 143,
+      like_count: 1890000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000003',
+    user_id: '00000000-0000-0000-0000-000000000003',
+    title: null,
+    caption: 'This $30 gadget from Amazon is actually INSANE 🤯 Link in bio! #tech #gadgets #amazon #fyp',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    thumbnail_url: 'https://picsum.photos/seed/tech/1080/1920',
+    duration: 22,
+    width: 1080,
+    height: 1920,
+    like_count: 97800,
+    comment_count: 2890,
+    share_count: 8700,
+    view_count: 456000,
+    bookmark_count: 4500,
+    status: 'ready',
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    scheduled_at: null,
+    published_at: new Date(Date.now() - 3600000).toISOString(),
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 3600000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000003',
+      clerk_id: 'user_demo3',
+      username: 'techwithtom',
+      display_name: 'Tech With Tom',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tom',
+      bio: 'Tech reviews & gadgets 💻',
+      website: null,
+      is_verified: false,
+      is_seller: false,
+      follower_count: 45000,
+      following_count: 567,
+      video_count: 62,
+      like_count: 978000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
+]
+
+export function useFeedVideos(tab: 'fyp' | 'following') {
+  const [videos, setVideos] = useState<Video[]>(SEED_VIDEOS)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    setIsLoading(true)
+    fetch(`/api/videos?tab=${tab}&limit=10`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.videos?.length > 0) {
+          setVideos(data.videos)
+        }
+      })
+      .catch(() => {
+        // Keep seed videos if API fails (e.g., no Supabase configured yet)
+      })
+      .finally(() => setIsLoading(false))
+  }, [tab])
+
+  return { videos, isLoading }
+}
