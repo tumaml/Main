@@ -4,7 +4,7 @@ export default function SignInPage() {
   return (
     <div className="min-h-[100dvh] bg-black flex flex-col items-center justify-center px-4">
       <div className="mb-8 text-center">
-        <h1 className="text-white text-4xl font-black tracking-tight">Demo</h1>
+        <h1 className="text-white text-4xl font-black tracking-tight">Mezan</h1>
         <p className="text-white/50 text-sm mt-1">Short videos. Shop your favorites.</p>
       </div>
       <SignIn

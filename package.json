@@ -31,6 +31,7 @@
     "react-dropzone": "^15.0.0",
     "react-hot-toast": "^2.6.0",
     "react-intersection-observer": "^10.0.3",
+    "svix": "^1.88.0",
     "tailwind-merge": "^3.5.0",
     "uuid": "^13.0.0",
     "zustand": "^5.0.12"

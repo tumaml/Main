@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
   // Auth
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/onboarding',
   // Public profiles
   '/profile/(.*)',
   // Shop — browsing is public, checkout requires auth
