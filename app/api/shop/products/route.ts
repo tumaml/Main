@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     .limit(limit + 1)
 
   if (category) query = query.eq('category', category)
-  if (storeId) query = query.eq('store_id', storeId)
+  if (storeId) query = query.eq('seller_id', storeId)
   if (cursor) query = query.lt('sold_count', parseInt(cursor))
 
   const { data: products, error } = await query
@@ -54,17 +54,18 @@ export async function POST(request: NextRequest) {
   const { data: user } = await (supabase.from('users').select('id').eq('clerk_id', clerkId).single() as any)
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: store } = await (supabase
-    .from('stores')
-    .select('id')
-    .eq('user_id', (user as Record<string, string>).id)
+  // Verify user is a seller before creating product
+  const userId = (user as Record<string, string>).id
+  const { data: sellerUser } = await (supabase
+    .from('users')
+    .select('is_seller')
+    .eq('id', userId)
     .single() as any)
 
-  if (!store) {
+  if (!sellerUser?.is_seller) {
     return NextResponse.json(
-      { error: 'No store found. Please set up your store first.' },
-      { status: 400 }
+      { error: 'Seller account required. Enable seller mode in settings.' },
+      { status: 403 }
     )
   }
 
@@ -72,13 +73,13 @@ export async function POST(request: NextRequest) {
   const { data: product, error } = await (supabase
     .from('products')
     .insert({
-      store_id: (store as Record<string, string>).id,
-      name: body.name,
-      description: body.description ?? '',
+      seller_id: userId,
+      title: body.name,
+      description: body.description ?? null,
       price: body.price,
-      sale_price: body.salePrice ?? null,
+      compare_price: body.salePrice ?? null,
       images: body.images ?? [],
-      category: body.category ?? 'other',
+      category: body.category ?? null,
       inventory: body.inventory ?? 0,
     })
     .select()

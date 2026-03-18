@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest) {
   if (username) updates.username = username
   if (displayName) updates.display_name = displayName
   if (bio !== undefined) updates.bio = bio
-  if (website !== undefined) updates.website = website
+  if (website !== undefined) updates.website_url = website
   if (avatarUrl) updates.avatar_url = avatarUrl
 
   const { data: user, error } = await supabase

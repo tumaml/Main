@@ -1,433 +1,514 @@
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+-- Mezan — Full Section 19 Schema (clean slate)
+-- Run this once on a fresh Supabase project.
+-- All old migrations removed; this is the single source of truth.
 
--- ─────────────────────────────────────────────
+-- ============================================================
+-- Extensions
+-- ============================================================
+create extension if not exists "uuid-ossp";
+create extension if not exists "pg_trgm";   -- full-text similarity search
+
+-- ============================================================
 -- USERS
--- ─────────────────────────────────────────────
-CREATE TABLE users (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  clerk_id        TEXT UNIQUE NOT NULL,
-  username        TEXT UNIQUE NOT NULL,
-  display_name    TEXT NOT NULL,
-  avatar_url      TEXT,
-  bio             TEXT,
-  website         TEXT,
-  is_verified     BOOLEAN DEFAULT FALSE,
-  is_seller       BOOLEAN DEFAULT FALSE,
-  follower_count  INT DEFAULT 0,
-  following_count INT DEFAULT 0,
-  video_count     INT DEFAULT 0,
-  like_count      INT DEFAULT 0,
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+create table public.users (
+  id                uuid primary key default uuid_generate_v4(),
+  clerk_id          text unique not null,
+  username          text unique not null,
+  display_name      text not null,
+  bio               text,
+  avatar_url        text,
+  website_url       text,
+  is_verified       boolean not null default false,
+  is_seller         boolean not null default false,
+  follower_count    integer not null default 0,
+  following_count   integer not null default 0,
+  like_count        integer not null default 0,   -- total likes received
+  video_count       integer not null default 0,
+  coin_balance      integer not null default 0,
+  interests         text[] not null default '{}', -- onboarding interest tags
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 
-CREATE INDEX idx_users_clerk_id ON users(clerk_id);
-CREATE INDEX idx_users_username ON users(username);
+create index users_username_idx on public.users (username);
+create index users_clerk_id_idx on public.users (clerk_id);
 
--- ─────────────────────────────────────────────
--- SOUNDS / AUDIO
--- ─────────────────────────────────────────────
-CREATE TABLE sounds (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
-  title       TEXT NOT NULL,
-  artist      TEXT,
-  audio_url   TEXT NOT NULL,
-  cover_url   TEXT,
-  duration    INT DEFAULT 0,
-  use_count   INT DEFAULT 0,
-  is_original BOOLEAN DEFAULT FALSE,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+-- FOLLOWS
+-- ============================================================
+create table public.follows (
+  follower_id   uuid not null references public.users(id) on delete cascade,
+  following_id  uuid not null references public.users(id) on delete cascade,
+  created_at    timestamptz not null default now(),
+  primary key (follower_id, following_id)
 );
 
--- ─────────────────────────────────────────────
+create index follows_following_id_idx on public.follows (following_id);
+
+-- ============================================================
 -- VIDEOS
--- ─────────────────────────────────────────────
-CREATE TABLE videos (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  sound_id        UUID REFERENCES sounds(id) ON DELETE SET NULL,
-  title           TEXT,
-  caption         TEXT NOT NULL DEFAULT '',
-  video_url       TEXT NOT NULL,
-  thumbnail_url   TEXT,
-  duration        INT DEFAULT 0,
-  width           INT DEFAULT 1080,
-  height          INT DEFAULT 1920,
-  like_count      INT DEFAULT 0,
-  comment_count   INT DEFAULT 0,
-  share_count     INT DEFAULT 0,
-  view_count      INT DEFAULT 0,
-  bookmark_count  INT DEFAULT 0,
-  status          TEXT DEFAULT 'ready' CHECK (status IN ('processing', 'ready', 'failed')),
-  privacy         TEXT DEFAULT 'public' CHECK (privacy IN ('public', 'friends', 'private')),
-  allow_comments  BOOLEAN DEFAULT TRUE,
-  allow_duet      BOOLEAN DEFAULT TRUE,
-  allow_stitch    BOOLEAN DEFAULT TRUE,
-  is_pinned       BOOLEAN DEFAULT FALSE,
-  scheduled_at    TIMESTAMPTZ,
-  published_at    TIMESTAMPTZ DEFAULT NOW(),
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+create table public.videos (
+  id              uuid primary key default uuid_generate_v4(),
+  user_id         uuid not null references public.users(id) on delete cascade,
+  caption         text not null default '',
+  video_url       text not null,
+  thumbnail_url   text,
+  duration        integer,                        -- seconds
+  width           integer,
+  height          integer,
+  privacy         text not null default 'public'  -- 'public' | 'friends' | 'private'
+                    check (privacy in ('public', 'friends', 'private')),
+  is_pinned       boolean not null default false,
+  allow_comments  boolean not null default true,
+  allow_duet      boolean not null default true,
+  allow_stitch    boolean not null default true,
+  sound_id        uuid,                           -- FK added after sounds table
+  like_count      integer not null default 0,
+  comment_count   integer not null default 0,
+  share_count     integer not null default 0,
+  bookmark_count  integer not null default 0,
+  view_count      bigint not null default 0,
+  tags            text[] not null default '{}',
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
 
-CREATE INDEX idx_videos_user_id ON videos(user_id);
-CREATE INDEX idx_videos_status ON videos(status);
-CREATE INDEX idx_videos_privacy ON videos(privacy);
-CREATE INDEX idx_videos_published_at ON videos(published_at DESC);
-CREATE INDEX idx_videos_view_count ON videos(view_count DESC);
+create index videos_user_id_idx       on public.videos (user_id);
+create index videos_created_at_idx    on public.videos (created_at desc);
+create index videos_tags_idx          on public.videos using gin (tags);
+create index videos_caption_trgm_idx  on public.videos using gin (caption gin_trgm_ops);
 
--- ─────────────────────────────────────────────
--- HASHTAGS
--- ─────────────────────────────────────────────
-CREATE TABLE hashtags (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name        TEXT UNIQUE NOT NULL,
-  video_count INT DEFAULT 0,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+-- SOUNDS (original audio)
+-- ============================================================
+create table public.sounds (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid references public.users(id) on delete set null,
+  title         text not null,
+  artist_name   text,
+  cover_url     text,
+  audio_url     text not null,
+  duration      integer,                          -- seconds
+  use_count     integer not null default 0,
+  created_at    timestamptz not null default now()
 );
 
-CREATE TABLE video_hashtags (
-  video_id   UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  hashtag_id UUID NOT NULL REFERENCES hashtags(id) ON DELETE CASCADE,
-  PRIMARY KEY (video_id, hashtag_id)
+-- Back-fill the FK on videos
+alter table public.videos
+  add constraint videos_sound_id_fkey
+    foreign key (sound_id) references public.sounds(id) on delete set null;
+
+-- ============================================================
+-- VIDEO LIKES
+-- ============================================================
+create table public.video_likes (
+  user_id     uuid not null references public.users(id) on delete cascade,
+  video_id    uuid not null references public.videos(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (user_id, video_id)
 );
 
--- ─────────────────────────────────────────────
--- SOCIAL INTERACTIONS
--- ─────────────────────────────────────────────
-CREATE TABLE follows (
-  follower_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  following_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (follower_id, following_id),
-  CHECK (follower_id != following_id)
+create index video_likes_video_id_idx on public.video_likes (video_id);
+
+-- ============================================================
+-- BOOKMARKS
+-- ============================================================
+create table public.bookmarks (
+  user_id     uuid not null references public.users(id) on delete cascade,
+  video_id    uuid not null references public.videos(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (user_id, video_id)
 );
 
-CREATE INDEX idx_follows_follower ON follows(follower_id);
-CREATE INDEX idx_follows_following ON follows(following_id);
+create index bookmarks_user_id_idx on public.bookmarks (user_id);
 
-CREATE TABLE likes (
-  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  video_id   UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (user_id, video_id)
+-- ============================================================
+-- COMMENTS
+-- ============================================================
+create table public.comments (
+  id          uuid primary key default uuid_generate_v4(),
+  video_id    uuid not null references public.videos(id) on delete cascade,
+  user_id     uuid not null references public.users(id) on delete cascade,
+  parent_id   uuid references public.comments(id) on delete cascade, -- 1-level reply
+  content     text not null,
+  like_count  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
 );
 
-CREATE INDEX idx_likes_video_id ON likes(video_id);
-CREATE INDEX idx_likes_user_id ON likes(user_id);
+create index comments_video_id_idx   on public.comments (video_id, created_at desc);
+create index comments_parent_id_idx  on public.comments (parent_id);
+create index comments_user_id_idx    on public.comments (user_id);
 
-CREATE TABLE comments (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  video_id    UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  parent_id   UUID REFERENCES comments(id) ON DELETE CASCADE,
-  content     TEXT NOT NULL,
-  like_count  INT DEFAULT 0,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+-- COMMENT LIKES
+-- ============================================================
+create table public.comment_likes (
+  user_id     uuid not null references public.users(id) on delete cascade,
+  comment_id  uuid not null references public.comments(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (user_id, comment_id)
 );
 
-CREATE INDEX idx_comments_video_id ON comments(video_id);
-CREATE INDEX idx_comments_user_id ON comments(user_id);
-CREATE INDEX idx_comments_parent_id ON comments(parent_id);
-
-CREATE TABLE bookmarks (
-  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  video_id   UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (user_id, video_id)
-);
-
--- ─────────────────────────────────────────────
--- STORES & PRODUCTS
--- ─────────────────────────────────────────────
-CREATE TABLE stores (
-  id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name               TEXT NOT NULL,
-  description        TEXT,
-  logo_url           TEXT,
-  banner_url         TEXT,
-  stripe_account_id  TEXT,
-  is_verified        BOOLEAN DEFAULT FALSE,
-  follower_count     INT DEFAULT 0,
-  product_count      INT DEFAULT 0,
-  rating             DECIMAL(3,2) DEFAULT 0,
-  created_at         TIMESTAMPTZ DEFAULT NOW(),
-  updated_at         TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE products (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  store_id     UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-  name         TEXT NOT NULL,
-  description  TEXT NOT NULL DEFAULT '',
-  price        INT NOT NULL, -- in cents
-  sale_price   INT,
-  images       TEXT[] DEFAULT '{}',
-  category     TEXT NOT NULL DEFAULT 'other',
-  inventory    INT DEFAULT 0,
-  sold_count   INT DEFAULT 0,
-  rating       DECIMAL(3,2) DEFAULT 0,
-  review_count INT DEFAULT 0,
-  is_active    BOOLEAN DEFAULT TRUE,
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_products_store_id ON products(store_id);
-CREATE INDEX idx_products_category ON products(category);
-CREATE INDEX idx_products_is_active ON products(is_active);
-
-CREATE TABLE product_variants (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  product_id  UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  name        TEXT NOT NULL,
-  value       TEXT NOT NULL,
-  price_delta INT DEFAULT 0,
-  inventory   INT DEFAULT 0,
-  sku         TEXT
-);
-
-CREATE TABLE video_products (
-  video_id    UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  product_id  UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  position_x  DECIMAL(5,2) DEFAULT 50,
-  position_y  DECIMAL(5,2) DEFAULT 50,
-  PRIMARY KEY (video_id, product_id)
-);
-
--- ─────────────────────────────────────────────
--- CART & ORDERS
--- ─────────────────────────────────────────────
-CREATE TABLE cart_items (
-  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
-  quantity   INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (user_id, product_id, variant_id)
-);
-
-CREATE TABLE addresses (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name         TEXT NOT NULL,
-  line1        TEXT NOT NULL,
-  line2        TEXT,
-  city         TEXT NOT NULL,
-  state        TEXT NOT NULL,
-  postal_code  TEXT NOT NULL,
-  country      TEXT NOT NULL DEFAULT 'US',
-  is_default   BOOLEAN DEFAULT FALSE,
-  created_at   TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE orders (
-  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  buyer_id              UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  store_id              UUID NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
-  stripe_payment_intent TEXT,
-  status                TEXT DEFAULT 'pending' CHECK (status IN ('pending','processing','shipped','delivered','returned','cancelled')),
-  subtotal              INT NOT NULL,
-  shipping_cost         INT DEFAULT 0,
-  tax                   INT DEFAULT 0,
-  total                 INT NOT NULL,
-  shipping_address      JSONB NOT NULL,
-  tracking_number       TEXT,
-  created_at            TIMESTAMPTZ DEFAULT NOW(),
-  updated_at            TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE order_items (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id     UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  product_id   UUID NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
-  variant_id   UUID REFERENCES product_variants(id) ON DELETE SET NULL,
-  quantity     INT NOT NULL,
-  unit_price   INT NOT NULL,
-  total_price  INT NOT NULL
-);
-
-CREATE TABLE order_status_history (
-  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id   UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  status     TEXT NOT NULL,
-  note       TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ─────────────────────────────────────────────
--- LIVE STREAMS
--- ─────────────────────────────────────────────
-CREATE TABLE live_streams (
-  id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title          TEXT NOT NULL,
-  thumbnail_url  TEXT,
-  stream_key     TEXT UNIQUE,
-  playback_url   TEXT,
-  status         TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled','live','ended')),
-  viewer_count   INT DEFAULT 0,
-  peak_viewers   INT DEFAULT 0,
-  gift_count     INT DEFAULT 0,
-  scheduled_at   TIMESTAMPTZ,
-  started_at     TIMESTAMPTZ,
-  ended_at       TIMESTAMPTZ,
-  created_at     TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE live_products (
-  live_id    UUID NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
-  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  pinned_at  TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (live_id, product_id)
-);
-
--- ─────────────────────────────────────────────
+-- ============================================================
 -- NOTIFICATIONS
--- ─────────────────────────────────────────────
-CREATE TABLE notifications (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  actor_id    UUID REFERENCES users(id) ON DELETE SET NULL,
-  type        TEXT NOT NULL,
-  entity_id   UUID,
-  entity_type TEXT,
-  message     TEXT NOT NULL,
-  is_read     BOOLEAN DEFAULT FALSE,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+create table public.notifications (
+  id           uuid primary key default uuid_generate_v4(),
+  user_id      uuid not null references public.users(id) on delete cascade,  -- recipient
+  actor_id     uuid references public.users(id) on delete cascade,           -- who triggered
+  type         text not null  -- 'like' | 'comment' | 'follow' | 'mention' | 'reply' | 'purchase' | 'gift'
+                 check (type in ('like','comment','follow','mention','reply','purchase','gift','system')),
+  video_id     uuid references public.videos(id) on delete cascade,
+  comment_id   uuid references public.comments(id) on delete cascade,
+  is_read      boolean not null default false,
+  message      text,
+  created_at   timestamptz not null default now()
 );
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id, is_read, created_at DESC);
+create index notifications_user_id_idx on public.notifications (user_id, created_at desc);
 
--- ─────────────────────────────────────────────
--- MESSAGES
--- ─────────────────────────────────────────────
-CREATE TABLE conversations (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  participant1 UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  participant2 UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  last_message TEXT,
-  last_msg_at  TIMESTAMPTZ,
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (participant1, participant2)
+-- ============================================================
+-- MESSAGES / INBOX
+-- ============================================================
+create table public.conversations (
+  id            uuid primary key default uuid_generate_v4(),
+  participant_a uuid not null references public.users(id) on delete cascade,
+  participant_b uuid not null references public.users(id) on delete cascade,
+  last_message  text,
+  last_message_at timestamptz,
+  created_at    timestamptz not null default now(),
+  unique (participant_a, participant_b)
 );
 
-CREATE TABLE messages (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  sender_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  content         TEXT NOT NULL,
-  type            TEXT DEFAULT 'text' CHECK (type IN ('text','video','product','image')),
-  metadata        JSONB,
-  is_read         BOOLEAN DEFAULT FALSE,
-  created_at      TIMESTAMPTZ DEFAULT NOW()
+create index conversations_participant_a_idx on public.conversations (participant_a);
+create index conversations_participant_b_idx on public.conversations (participant_b);
+
+create table public.messages (
+  id              uuid primary key default uuid_generate_v4(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  sender_id       uuid not null references public.users(id) on delete cascade,
+  content         text not null,
+  media_url       text,
+  is_read         boolean not null default false,
+  created_at      timestamptz not null default now()
 );
 
-CREATE INDEX idx_messages_conversation ON messages(conversation_id, created_at DESC);
+create index messages_conversation_id_idx on public.messages (conversation_id, created_at asc);
 
--- ─────────────────────────────────────────────
--- AFFILIATE / COINS
--- ─────────────────────────────────────────────
-CREATE TABLE affiliate_links (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  creator_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  product_id   UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  code         TEXT UNIQUE NOT NULL,
-  commission   DECIMAL(5,2) DEFAULT 5.00,
-  click_count  INT DEFAULT 0,
-  order_count  INT DEFAULT 0,
-  earnings     INT DEFAULT 0,
-  created_at   TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+-- SHOP — PRODUCTS
+-- ============================================================
+create table public.products (
+  id              uuid primary key default uuid_generate_v4(),
+  seller_id       uuid not null references public.users(id) on delete cascade,
+  title           text not null,
+  description     text,
+  price           numeric(12,2) not null check (price >= 0),
+  compare_price   numeric(12,2),                  -- original / crossed-out price
+  currency        text not null default 'USD',
+  inventory       integer not null default 0,
+  images          text[] not null default '{}',
+  category        text,
+  tags            text[] not null default '{}',
+  is_active       boolean not null default true,
+  is_digital      boolean not null default false,
+  rating          numeric(3,2) not null default 0,
+  review_count    integer not null default 0,
+  sold_count      integer not null default 0,
+  stripe_price_id text,                           -- set when Stripe is configured
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
 
-CREATE TABLE coins (
-  user_id  UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  balance  INT DEFAULT 0,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+create index products_seller_id_idx  on public.products (seller_id);
+create index products_category_idx   on public.products (category);
+create index products_tags_idx       on public.products using gin (tags);
+create index products_title_trgm_idx on public.products using gin (title gin_trgm_ops);
+
+-- ============================================================
+-- VIDEO ↔ PRODUCT LINKS (shoppable videos)
+-- ============================================================
+create table public.video_products (
+  video_id    uuid not null references public.videos(id) on delete cascade,
+  product_id  uuid not null references public.products(id) on delete cascade,
+  position    integer not null default 0,         -- display order
+  primary key (video_id, product_id)
 );
 
-CREATE TABLE coin_transactions (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  amount      INT NOT NULL,
-  type        TEXT NOT NULL CHECK (type IN ('purchase','gift_send','gift_receive','withdrawal')),
-  reference   TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- ============================================================
+-- SHOP — ORDERS
+-- ============================================================
+create table public.orders (
+  id                  uuid primary key default uuid_generate_v4(),
+  buyer_id            uuid not null references public.users(id) on delete restrict,
+  seller_id           uuid not null references public.users(id) on delete restrict,
+  status              text not null default 'pending'
+                        check (status in ('pending','paid','shipped','delivered','refunded','cancelled')),
+  subtotal            numeric(12,2) not null,
+  shipping_cost       numeric(12,2) not null default 0,
+  total               numeric(12,2) not null,
+  currency            text not null default 'USD',
+  stripe_payment_intent text,
+  shipping_address    jsonb,
+  tracking_number     text,
+  notes               text,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
 );
 
--- ─────────────────────────────────────────────
--- FUNCTIONS & TRIGGERS
--- ─────────────────────────────────────────────
+create index orders_buyer_id_idx  on public.orders (buyer_id);
+create index orders_seller_id_idx on public.orders (seller_id);
 
--- Auto update updated_at
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
-$$ LANGUAGE plpgsql;
+create table public.order_items (
+  id          uuid primary key default uuid_generate_v4(),
+  order_id    uuid not null references public.orders(id) on delete cascade,
+  product_id  uuid not null references public.products(id) on delete restrict,
+  quantity    integer not null default 1 check (quantity > 0),
+  unit_price  numeric(12,2) not null,
+  total_price numeric(12,2) not null,
+  snapshot    jsonb                                -- product snapshot at purchase time
+);
 
-CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_videos_updated_at BEFORE UPDATE ON videos
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_products_updated_at BEFORE UPDATE ON products
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_stores_updated_at BEFORE UPDATE ON stores
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON orders
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+create index order_items_order_id_idx on public.order_items (order_id);
 
--- Like count triggers
-CREATE OR REPLACE FUNCTION update_like_counts()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    UPDATE videos SET like_count = like_count + 1 WHERE id = NEW.video_id;
-  ELSIF TG_OP = 'DELETE' THEN
-    UPDATE videos SET like_count = GREATEST(0, like_count - 1) WHERE id = OLD.video_id;
-  END IF;
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
+-- ============================================================
+-- AFFILIATE LINKS
+-- ============================================================
+create table public.affiliate_links (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid not null references public.users(id) on delete cascade,
+  product_id  uuid not null references public.products(id) on delete cascade,
+  code        text unique not null,
+  commission_rate numeric(5,4) not null default 0.05,  -- 5%
+  click_count integer not null default 0,
+  sale_count  integer not null default 0,
+  earnings    numeric(12,2) not null default 0,
+  created_at  timestamptz not null default now()
+);
 
-CREATE TRIGGER trg_likes_count AFTER INSERT OR DELETE ON likes
-  FOR EACH ROW EXECUTE FUNCTION update_like_counts();
+create index affiliate_links_user_id_idx on public.affiliate_links (user_id);
+create index affiliate_links_code_idx    on public.affiliate_links (code);
 
--- Comment count triggers
-CREATE OR REPLACE FUNCTION update_comment_counts()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    UPDATE videos SET comment_count = comment_count + 1 WHERE id = NEW.video_id;
-  ELSIF TG_OP = 'DELETE' THEN
-    UPDATE videos SET comment_count = GREATEST(0, comment_count - 1) WHERE id = OLD.video_id;
-  END IF;
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
+-- ============================================================
+-- COINS / GIFTS (Phase 5 — table created now, logic later)
+-- ============================================================
+create table public.coin_transactions (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid not null references public.users(id) on delete cascade,
+  type        text not null
+                check (type in ('purchase','earn','spend','gift_sent','gift_received','withdrawal')),
+  amount      integer not null,                   -- positive = credit, negative = debit
+  balance_after integer not null,
+  reference_id uuid,                             -- order_id, video_id, etc.
+  description text,
+  created_at  timestamptz not null default now()
+);
 
-CREATE TRIGGER trg_comments_count AFTER INSERT OR DELETE ON comments
-  FOR EACH ROW EXECUTE FUNCTION update_comment_counts();
+create index coin_transactions_user_id_idx on public.coin_transactions (user_id, created_at desc);
 
--- Follow count triggers
-CREATE OR REPLACE FUNCTION update_follow_counts()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    UPDATE users SET following_count = following_count + 1 WHERE id = NEW.follower_id;
-    UPDATE users SET follower_count = follower_count + 1 WHERE id = NEW.following_id;
-  ELSIF TG_OP = 'DELETE' THEN
-    UPDATE users SET following_count = GREATEST(0, following_count - 1) WHERE id = OLD.follower_id;
-    UPDATE users SET follower_count = GREATEST(0, follower_count - 1) WHERE id = OLD.following_id;
-  END IF;
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
+-- ============================================================
+-- LIVE ROOMS (Phase 5)
+-- ============================================================
+create table public.live_rooms (
+  id            uuid primary key default uuid_generate_v4(),
+  host_id       uuid not null references public.users(id) on delete cascade,
+  title         text not null,
+  thumbnail_url text,
+  room_code     text unique not null,             -- 100ms room ID
+  status        text not null default 'scheduled'
+                  check (status in ('scheduled','live','ended')),
+  viewer_count  integer not null default 0,
+  peak_viewers  integer not null default 0,
+  started_at    timestamptz,
+  ended_at      timestamptz,
+  created_at    timestamptz not null default now()
+);
 
-CREATE TRIGGER trg_follows_count AFTER INSERT OR DELETE ON follows
-  FOR EACH ROW EXECUTE FUNCTION update_follow_counts();
+create index live_rooms_host_id_idx on public.live_rooms (host_id);
+create index live_rooms_status_idx  on public.live_rooms (status);
+
+-- ============================================================
+-- SELLER STORES
+-- ============================================================
+create table public.stores (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid unique not null references public.users(id) on delete cascade,
+  name          text not null,
+  description   text,
+  logo_url      text,
+  banner_url    text,
+  stripe_account_id text,                         -- Stripe Connect
+  is_approved   boolean not null default false,
+  rating        numeric(3,2) not null default 0,
+  review_count  integer not null default 0,
+  sale_count    integer not null default 0,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+-- ============================================================
+-- PRODUCT REVIEWS
+-- ============================================================
+create table public.product_reviews (
+  id          uuid primary key default uuid_generate_v4(),
+  product_id  uuid not null references public.products(id) on delete cascade,
+  user_id     uuid not null references public.users(id) on delete cascade,
+  order_id    uuid references public.orders(id) on delete set null,
+  rating      integer not null check (rating between 1 and 5),
+  content     text,
+  images      text[] not null default '{}',
+  created_at  timestamptz not null default now(),
+  unique (product_id, user_id)
+);
+
+create index product_reviews_product_id_idx on public.product_reviews (product_id);
+
+-- ============================================================
+-- updated_at triggers
+-- ============================================================
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger users_updated_at
+  before update on public.users
+  for each row execute procedure public.set_updated_at();
+
+create trigger videos_updated_at
+  before update on public.videos
+  for each row execute procedure public.set_updated_at();
+
+create trigger comments_updated_at
+  before update on public.comments
+  for each row execute procedure public.set_updated_at();
+
+create trigger products_updated_at
+  before update on public.products
+  for each row execute procedure public.set_updated_at();
+
+create trigger orders_updated_at
+  before update on public.orders
+  for each row execute procedure public.set_updated_at();
+
+create trigger stores_updated_at
+  before update on public.stores
+  for each row execute procedure public.set_updated_at();
+
+-- ============================================================
+-- Counter maintenance functions (called from triggers)
+-- ============================================================
+
+-- video_likes → videos.like_count + users.like_count
+create or replace function public.update_video_like_counts()
+returns trigger language plpgsql security definer as $$
+begin
+  if (TG_OP = 'INSERT') then
+    update public.videos set like_count = like_count + 1 where id = NEW.video_id;
+    update public.users  set like_count = like_count + 1
+      where id = (select user_id from public.videos where id = NEW.video_id);
+  elsif (TG_OP = 'DELETE') then
+    update public.videos set like_count = greatest(like_count - 1, 0) where id = OLD.video_id;
+    update public.users  set like_count = greatest(like_count - 1, 0)
+      where id = (select user_id from public.videos where id = OLD.video_id);
+  end if;
+  return null;
+end;
+$$;
+
+create trigger video_likes_counter
+  after insert or delete on public.video_likes
+  for each row execute procedure public.update_video_like_counts();
+
+-- bookmarks → videos.bookmark_count
+create or replace function public.update_bookmark_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if (TG_OP = 'INSERT') then
+    update public.videos set bookmark_count = bookmark_count + 1 where id = NEW.video_id;
+  elsif (TG_OP = 'DELETE') then
+    update public.videos set bookmark_count = greatest(bookmark_count - 1, 0) where id = OLD.video_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger bookmarks_counter
+  after insert or delete on public.bookmarks
+  for each row execute procedure public.update_bookmark_count();
+
+-- comments → videos.comment_count
+create or replace function public.update_comment_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if (TG_OP = 'INSERT') then
+    update public.videos set comment_count = comment_count + 1 where id = NEW.video_id;
+  elsif (TG_OP = 'DELETE') then
+    update public.videos set comment_count = greatest(comment_count - 1, 0) where id = OLD.video_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger comments_counter
+  after insert or delete on public.comments
+  for each row execute procedure public.update_comment_count();
+
+-- comment_likes → comments.like_count
+create or replace function public.update_comment_like_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if (TG_OP = 'INSERT') then
+    update public.comments set like_count = like_count + 1 where id = NEW.comment_id;
+  elsif (TG_OP = 'DELETE') then
+    update public.comments set like_count = greatest(like_count - 1, 0) where id = OLD.comment_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger comment_likes_counter
+  after insert or delete on public.comment_likes
+  for each row execute procedure public.update_comment_like_count();
+
+-- follows → follower_count + following_count
+create or replace function public.update_follow_counts()
+returns trigger language plpgsql security definer as $$
+begin
+  if (TG_OP = 'INSERT') then
+    update public.users set follower_count  = follower_count  + 1 where id = NEW.following_id;
+    update public.users set following_count = following_count + 1 where id = NEW.follower_id;
+  elsif (TG_OP = 'DELETE') then
+    update public.users set follower_count  = greatest(follower_count  - 1, 0) where id = OLD.following_id;
+    update public.users set following_count = greatest(following_count - 1, 0) where id = OLD.follower_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger follows_counter
+  after insert or delete on public.follows
+  for each row execute procedure public.update_follow_counts();
+
+-- videos → users.video_count
+create or replace function public.update_video_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if (TG_OP = 'INSERT') then
+    update public.users set video_count = video_count + 1 where id = NEW.user_id;
+  elsif (TG_OP = 'DELETE') then
+    update public.users set video_count = greatest(video_count - 1, 0) where id = OLD.user_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger videos_user_count
+  after insert or delete on public.videos
+  for each row execute procedure public.update_video_count();

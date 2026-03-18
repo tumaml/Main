@@ -1,123 +1,130 @@
--- Demo seed data for Phase 1
--- Note: Replace clerk_ids with real ones from your Clerk dashboard when deploying
+-- Mezan — Seed Data (Phase 1 development only)
+-- Uses the public Mux HLS test stream for all videos.
+-- Run AFTER migrations in a fresh Supabase project.
+-- DO NOT run in production.
 
--- Demo users
-INSERT INTO users (id, clerk_id, username, display_name, avatar_url, bio, is_verified, follower_count, following_count, video_count)
-VALUES
-  ('00000000-0000-0000-0000-000000000001', 'user_demo1', 'alexcreates', 'Alex Creates', 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex', 'Content creator 🎬 | Travel & Food', true, 128500, 342, 87),
-  ('00000000-0000-0000-0000-000000000002', 'user_demo2', 'sarahstyle', 'Sarah Style', 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah', 'Fashion & Beauty 💄 | New York', true, 89200, 1200, 143),
-  ('00000000-0000-0000-0000-000000000003', 'user_demo3', 'techwithtom', 'Tech With Tom', 'https://api.dicebear.com/7.x/avataaars/svg?seed=tom', 'Tech reviews & gadgets 💻', false, 45000, 567, 62);
+-- ============================================================
+-- Seed users (clerk_id values are placeholders — replace with
+-- real Clerk user IDs from your dev dashboard after sign-up)
+-- ============================================================
+insert into public.users (id, clerk_id, username, display_name, bio, avatar_url, is_verified, follower_count, following_count, video_count)
+values
+  ('11111111-0000-0000-0000-000000000001', 'clerk_seed_user_1', 'mezan_official', 'Mezan Official',  'The official Mezan account 🎉',                 null, true,  18400, 0,    5),
+  ('11111111-0000-0000-0000-000000000002', 'clerk_seed_user_2', 'alexcreates',    'Alex Creates',    'Content creator • Travel • Food 🌍',            null, false, 4200,  120,  5),
+  ('11111111-0000-0000-0000-000000000003', 'clerk_seed_user_3', 'dancewithjane',  'Dance With Jane', 'Dance videos every day 💃 • DMs open',          null, true,  92100, 300,  5),
+  ('11111111-0000-0000-0000-000000000004', 'clerk_seed_user_4', 'chefmaria',      'Chef Maria',      'Home cooking made easy 🍳 • New recipe weekly', null, false, 7800,  55,   5),
+  ('11111111-0000-0000-0000-000000000005', 'clerk_seed_user_5', 'hikingwithkate', 'Hiking With Kate','Adventure awaits 🏔️ • Pacific Crest Trail 2026', null, false, 3100,  80,   5)
+on conflict (clerk_id) do nothing;
 
--- Demo hashtags
-INSERT INTO hashtags (id, name, video_count)
-VALUES
-  ('10000000-0000-0000-0000-000000000001', 'fyp', 9800000),
-  ('10000000-0000-0000-0000-000000000002', 'viral', 7200000),
-  ('10000000-0000-0000-0000-000000000003', 'travel', 3400000),
-  ('10000000-0000-0000-0000-000000000004', 'fashion', 4100000),
-  ('10000000-0000-0000-0000-000000000005', 'tech', 2800000),
-  ('10000000-0000-0000-0000-000000000006', 'food', 5600000),
-  ('10000000-0000-0000-0000-000000000007', 'comedy', 6300000),
-  ('10000000-0000-0000-0000-000000000008', 'dance', 8900000);
-
--- Demo sounds
-INSERT INTO sounds (id, title, artist, audio_url, use_count, is_original)
-VALUES
-  ('20000000-0000-0000-0000-000000000001', 'Summer Vibes', 'LoFi Beats', '/audio/summer-vibes.mp3', 284000, false),
-  ('20000000-0000-0000-0000-000000000002', 'Epic Cinematic', 'CinematicStudio', '/audio/epic-cinematic.mp3', 127000, false),
-  ('20000000-0000-0000-0000-000000000003', 'Original Sound', 'alexcreates', '/audio/original-1.mp3', 8400, true);
-
--- Demo videos using free Cloudflare Stream test URLs (use your own video URLs)
-INSERT INTO videos (id, user_id, sound_id, caption, video_url, thumbnail_url, duration, like_count, comment_count, share_count, view_count, status, privacy)
-VALUES
+-- ============================================================
+-- Seed videos (all using the Mux public HLS test stream)
+-- ============================================================
+insert into public.videos (id, user_id, caption, video_url, thumbnail_url, privacy, like_count, comment_count, share_count, view_count, tags)
+values
   (
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    '20000000-0000-0000-0000-000000000001',
-    'Exploring the hidden gems of Tokyo 🇯🇵✨ Drop a 🗾 if you want a full guide! #travel #japan #fyp #viral',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    'https://picsum.photos/seed/tokyo/1080/1920',
-    15,
-    284500,
-    3420,
-    18900,
-    1250000,
-    'ready',
-    'public'
+    '22222222-0000-0000-0000-000000000001',
+    '11111111-0000-0000-0000-000000000001',
+    'Welcome to Mezan! 🎉 The TikTok + shopping experience you''ve been waiting for. #mezan #launch',
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    null,
+    'public',
+    18400, 342, 890, 284000,
+    array['mezan','launch','announcement']
   ),
   (
-    '30000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000002',
-    '20000000-0000-0000-0000-000000000002',
-    'GRWM for New York Fashion Week 👗💅 This look took 2 hours but SO worth it! #fashion #grwm #nyfw #style',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    'https://picsum.photos/seed/fashion/1080/1920',
-    28,
-    189200,
-    5670,
-    12400,
-    890000,
-    'ready',
-    'public'
+    '22222222-0000-0000-0000-000000000002',
+    '11111111-0000-0000-0000-000000000002',
+    'Exploring the streets of Lisbon 🇵🇹 This city never disappoints! #travel #lisbon #europe',
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    null,
+    'public',
+    4231, 128, 201, 67000,
+    array['travel','lisbon','europe']
   ),
   (
-    '30000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000003',
-    '20000000-0000-0000-0000-000000000001',
-    'This $30 gadget from Amazon is actually INSANE 🤯 Link in bio! #tech #gadgets #amazon #fyp',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    'https://picsum.photos/seed/tech/1080/1920',
-    22,
-    97800,
-    2890,
-    8700,
-    456000,
-    'ready',
-    'public'
-  );
-
--- Link hashtags to videos
-INSERT INTO video_hashtags (video_id, hashtag_id)
-VALUES
-  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003'),
-  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
-  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002'),
-  ('30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000004'),
-  ('30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001'),
-  ('30000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000005'),
-  ('30000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001');
-
--- Demo store
-INSERT INTO stores (id, user_id, name, description, is_verified, product_count, rating)
-VALUES
-  ('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'Sarah Style Shop', 'Curated fashion & beauty finds 💫', true, 24, 4.8);
-
--- Demo products
-INSERT INTO products (id, store_id, name, description, price, images, category, inventory, sold_count, rating, review_count)
-VALUES
-  (
-    '50000000-0000-0000-0000-000000000001',
-    '40000000-0000-0000-0000-000000000001',
-    'Y2K Butterfly Crop Top',
-    'As seen in my GRWM video! Super stretchy and comfy. Available in 3 colors.',
-    2999,
-    ARRAY['https://picsum.photos/seed/top1/800/800', 'https://picsum.photos/seed/top2/800/800'],
-    'fashion',
-    150,
-    892,
-    4.7,
-    234
+    '22222222-0000-0000-0000-000000000003',
+    '11111111-0000-0000-0000-000000000003',
+    'New choreography drop 💃🔥 Learn this in 60 seconds! #dance #choreography #trending',
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    null,
+    'public',
+    92100, 1840, 5200, 1420000,
+    array['dance','choreography','trending']
   ),
   (
-    '50000000-0000-0000-0000-000000000002',
-    '40000000-0000-0000-0000-000000000001',
-    'Glazed Donut Lip Oil',
-    'Viral lip oil that gives you the perfect glossy look. 8-hour moisture.',
-    1499,
-    ARRAY['https://picsum.photos/seed/lip1/800/800', 'https://picsum.photos/seed/lip2/800/800'],
-    'beauty',
-    340,
-    2341,
-    4.9,
-    567
-  );
+    '22222222-0000-0000-0000-000000000004',
+    '11111111-0000-0000-0000-000000000004',
+    '5-ingredient pasta that will change your life 🍝 Recipe in comments! #cooking #pasta #easyrecipe',
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    null,
+    'public',
+    7831, 412, 1100, 118000,
+    array['cooking','pasta','easyrecipe','food']
+  ),
+  (
+    '22222222-0000-0000-0000-000000000005',
+    '11111111-0000-0000-0000-000000000005',
+    'Day 47 on the Pacific Crest Trail ⛺🏔️ 1,200 miles down, 1,450 to go. #hiking #pct #adventure',
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    null,
+    'public',
+    3142, 287, 430, 49000,
+    array['hiking','pct','adventure','outdoors']
+  )
+on conflict (id) do nothing;
+
+-- ============================================================
+-- Seed follows (mutual between users for friends tab testing)
+-- ============================================================
+insert into public.follows (follower_id, following_id) values
+  ('11111111-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001'),
+  ('11111111-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000002'),
+  ('11111111-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000003'),
+  ('11111111-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000002'),
+  ('11111111-0000-0000-0000-000000000004', '11111111-0000-0000-0000-000000000001'),
+  ('11111111-0000-0000-0000-000000000005', '11111111-0000-0000-0000-000000000001')
+on conflict do nothing;
+
+-- ============================================================
+-- Seed store
+-- ============================================================
+insert into public.stores (id, user_id, name, description, is_approved)
+values
+  ('33333333-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000004', 'Chef Maria Kitchen', 'Premium cookware and ingredients used in my videos', true)
+on conflict (user_id) do nothing;
+
+-- ============================================================
+-- Seed products
+-- ============================================================
+insert into public.products (id, seller_id, title, description, price, compare_price, images, category, inventory, sold_count, rating, review_count, is_active, tags)
+values
+  (
+    '44444444-0000-0000-0000-000000000001',
+    '11111111-0000-0000-0000-000000000004',
+    'Non-Stick Ceramic Pan 10"',
+    'The exact pan used in all my cooking videos. Naturally non-stick, oven-safe to 450°F.',
+    4999,
+    6999,
+    array['https://picsum.photos/seed/pan1/800/800'],
+    'kitchen',
+    120, 892, 4.8, 234,
+    true,
+    array['kitchen','cooking','pans']
+  ),
+  (
+    '44444444-0000-0000-0000-000000000002',
+    '11111111-0000-0000-0000-000000000004',
+    'Artisan Pasta Bundle (3-pack)',
+    'Imported Italian pasta — the secret to my 5-ingredient pasta recipe. Bronze-cut, slow-dried.',
+    1899,
+    null,
+    array['https://picsum.photos/seed/pasta1/800/800'],
+    'food',
+    350, 2341, 4.9, 567,
+    true,
+    array['food','pasta','italian']
+  )
+on conflict (id) do nothing;
+
+-- Update seller flag for seed sellers
+update public.users set is_seller = true where id = '11111111-0000-0000-0000-000000000004';

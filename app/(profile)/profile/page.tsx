@@ -123,14 +123,14 @@ export default function ProfilePage() {
             {profile.bio}
           </p>
         )}
-        {profile?.website && (
+        {profile?.website_url && (
           <a
-            href={profile.website}
+            href={profile.website_url}
             className="text-[#69C9D0] text-sm"
             target="_blank"
             rel="noopener noreferrer"
           >
-            {profile.website.replace(/^https?:\/\//, '')}
+            {profile.website_url.replace(/^https?:\/\//, '')}
           </a>
         )}
       </div>
