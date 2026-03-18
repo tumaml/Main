@@ -4,77 +4,103 @@ import { auth } from '@clerk/nextjs/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const tab = searchParams.get('tab') || 'fyp'
+  const tab    = searchParams.get('tab') || 'fyp'
   const cursor = searchParams.get('cursor')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 20)
   const userId = searchParams.get('userId')
+  const limit  = Math.min(parseInt(searchParams.get('limit') || '10'), 20)
 
   const supabase = createServerSupabase()
   const { userId: clerkId } = await auth()
 
   try {
-    let query = supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase
       .from('videos')
-      .select(`*, user:users(id, username, display_name, avatar_url, is_verified, follower_count)`)
-      .eq('status', 'ready')
+      .select('*, user:users(id, username, display_name, avatar_url, is_verified, follower_count)')
       .eq('privacy', 'public')
-      .order('published_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit + 1)
 
-    if (userId) query = (query as any).eq('user_id', userId)
-    if (cursor) query = (query as any).lt('published_at', cursor)
+    if (userId) query = query.eq('user_id', userId)
+    if (cursor) query = query.lt('created_at', cursor)
 
-    if (tab === 'following' && clerkId) {
-      const { data: userProfile } = await supabase
+    // For following/friends tabs, scope to relevant user IDs
+    if ((tab === 'following' || tab === 'friends') && clerkId) {
+      const { data: me } = await supabase
         .from('users').select('id').eq('clerk_id', clerkId).single()
 
-      if (userProfile) {
-        const { data: following } = await supabase
-          .from('follows').select('following_id').eq('follower_id', (userProfile as any).id)
+      if (!me) return NextResponse.json({ videos: [], nextCursor: null })
 
-        const followingIds = (following || []).map((f: any) => f.following_id)
-        if (followingIds.length === 0) {
-          return NextResponse.json({ videos: [], nextCursor: null })
-        }
-        query = (query as any).in('user_id', followingIds)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const meId = (me as any).id
+
+      if (tab === 'following') {
+        const { data: follows } = await supabase
+          .from('follows').select('following_id').eq('follower_id', meId)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ids = (follows || []).map((f: any) => f.following_id)
+        if (ids.length === 0) return NextResponse.json({ videos: [], nextCursor: null })
+        query = query.in('user_id', ids)
+      }
+
+      if (tab === 'friends') {
+        // Friends = mutual follows
+        const { data: iFollow } = await supabase
+          .from('follows').select('following_id').eq('follower_id', meId)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const iFollowIds = (iFollow || []).map((f: any) => f.following_id)
+        if (iFollowIds.length === 0) return NextResponse.json({ videos: [], nextCursor: null })
+
+        const { data: followBack } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', meId)
+          .in('follower_id', iFollowIds)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const friendIds = (followBack || []).map((f: any) => f.follower_id)
+        if (friendIds.length === 0) return NextResponse.json({ videos: [], nextCursor: null })
+        query = query.in('user_id', friendIds)
       }
     }
 
     const { data: videos, error } = await query
     if (error) throw error
 
-    const hasMore = (videos?.length || 0) > limit
-    const slicedVideos = hasMore ? videos!.slice(0, limit) : videos || []
-    const nextCursor = hasMore
-      ? (slicedVideos[slicedVideos.length - 1] as any)?.published_at
-      : null
+    const hasMore    = (videos?.length || 0) > limit
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sliced: any[] = hasMore ? videos!.slice(0, limit) : videos || []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nextCursor = hasMore ? (sliced[sliced.length - 1] as any)?.created_at : null
 
-    if (clerkId && slicedVideos.length > 0) {
-      const { data: userProfile } = await supabase
+    // Annotate is_liked / is_bookmarked for the current user
+    if (clerkId && sliced.length > 0) {
+      const { data: me } = await supabase
         .from('users').select('id').eq('clerk_id', clerkId).single()
 
-      if (userProfile) {
-        const videoIds = slicedVideos.map((v: any) => v.id)
-        const uid = (userProfile as any).id
+      if (me) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const meId = (me as any).id
+        const videoIds = sliced.map((v) => v.id)
 
         const [{ data: likes }, { data: bookmarks }] = await Promise.all([
-          supabase.from('likes').select('video_id').eq('user_id', uid).in('video_id', videoIds),
-          supabase.from('bookmarks').select('video_id').eq('user_id', uid).in('video_id', videoIds),
+          supabase.from('video_likes').select('video_id').eq('user_id', meId).in('video_id', videoIds),
+          supabase.from('bookmarks').select('video_id').eq('user_id', meId).in('video_id', videoIds),
         ])
 
-        const likedSet = new Set((likes || []).map((l: any) => l.video_id))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const likedSet      = new Set((likes || []).map((l: any) => l.video_id))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const bookmarkedSet = new Set((bookmarks || []).map((b: any) => b.video_id))
-
-        slicedVideos.forEach((v: any) => {
-          v.is_liked = likedSet.has(v.id)
+        sliced.forEach((v) => {
+          v.is_liked      = likedSet.has(v.id)
           v.is_bookmarked = bookmarkedSet.has(v.id)
         })
       }
     }
 
-    return NextResponse.json({ videos: slicedVideos, nextCursor })
-  } catch (error) {
-    console.error('GET /api/videos error:', error)
+    return NextResponse.json({ videos: sliced, nextCursor })
+  } catch (err) {
+    console.error('GET /api/videos error:', err)
     return NextResponse.json({ error: 'Failed to fetch videos' }, { status: 500 })
   }
 }
@@ -86,34 +112,40 @@ export async function POST(request: NextRequest) {
   const supabase = createServerSupabase()
 
   try {
-    const body = await request.json()
-    const { videoUrl, thumbnailUrl, caption, duration, width, height, privacy } = body
+    const body = await request.json() as {
+      videoUrl: string
+      thumbnailUrl?: string
+      caption?: string
+      duration?: number
+      width?: number
+      height?: number
+      privacy?: 'public' | 'friends' | 'private'
+    }
 
-    const { data: userProfile } = await supabase
+    const { data: me } = await supabase
       .from('users').select('id').eq('clerk_id', clerkId).single()
-
-    if (!userProfile) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (!me) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const { data: video, error } = await supabase
       .from('videos')
       .insert({
-        user_id: (userProfile as any).id,
-        video_url: videoUrl,
-        thumbnail_url: thumbnailUrl || null,
-        caption: caption || '',
-        duration: duration || 0,
-        width: width || 1080,
-        height: height || 1920,
-        privacy: privacy || 'public',
-        status: 'ready',
-      } as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        user_id:       (me as any).id,
+        video_url:     body.videoUrl,
+        thumbnail_url: body.thumbnailUrl ?? null,
+        caption:       body.caption ?? '',
+        duration:      body.duration ?? null,
+        width:         body.width   ?? null,
+        height:        body.height  ?? null,
+        privacy:       body.privacy ?? 'public',
+      })
       .select('*, user:users(id, username, display_name, avatar_url)')
       .single()
 
     if (error) throw error
     return NextResponse.json({ video }, { status: 201 })
-  } catch (error) {
-    console.error('POST /api/videos error:', error)
+  } catch (err) {
+    console.error('POST /api/videos error:', err)
     return NextResponse.json({ error: 'Failed to create video' }, { status: 500 })
   }
 }
