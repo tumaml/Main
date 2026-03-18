@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from 'react'
 import { Video } from '@/types/database'
+import type { FeedTab } from '@/components/shared/FeedHeader'
 
 interface UseInfiniteVideosOptions {
-  tab?: 'fyp' | 'following'
+  tab?: FeedTab
   userId?: string
   initialVideos?: Video[]
 }
@@ -29,15 +30,15 @@ export function useInfiniteVideos({
       if (userId) params.set('userId', userId)
 
       const res = await fetch(`/api/videos?${params}`)
-      const data = await res.json()
+      const data = await res.json() as { videos?: Video[]; nextCursor?: string | null }
 
-      if (data.videos?.length > 0) {
+      if (data.videos && data.videos.length > 0) {
         setVideos((prev) => {
           const existingIds = new Set(prev.map((v) => v.id))
-          const newVideos = data.videos.filter((v: Video) => !existingIds.has(v.id))
+          const newVideos = data.videos!.filter((v) => !existingIds.has(v.id))
           return [...prev, ...newVideos]
         })
-        setCursor(data.nextCursor)
+        setCursor(data.nextCursor ?? null)
         setHasMore(!!data.nextCursor)
       } else {
         setHasMore(false)

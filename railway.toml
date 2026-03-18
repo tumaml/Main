@@ -1,0 +1,18 @@
+# Railway configuration for Mezan background workers
+# Phase 5+: video processing, recommendation engine, commission calculator
+# Deploy with: railway up
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "node workers/video-processor.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+# Workers are deployed as separate Railway services:
+# - video-processor  (FFmpeg transcoding, Phase 2)
+# - recommendation   (Feed scoring, Phase 7)
+# - commission       (Affiliate payouts, Phase 4)

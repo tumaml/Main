@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { Video } from '@/types/database'
+import type { FeedTab } from '@/components/shared/FeedHeader'
 
-// Seed videos used for initial render before Supabase loads
+// Seed videos — shown until Supabase responds (or when env vars aren't configured)
 export const SEED_VIDEOS: Video[] = [
   {
     id: '30000000-0000-0000-0000-000000000001',
     user_id: '00000000-0000-0000-0000-000000000001',
     title: null,
     caption: 'Exploring the hidden gems of Tokyo 🇯🇵✨ Drop a 🗾 if you want a full guide! #travel #japan #fyp #viral',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnail_url: 'https://picsum.photos/seed/tokyo/1080/1920',
     duration: 15,
     width: 1080,
@@ -55,7 +56,7 @@ export const SEED_VIDEOS: Video[] = [
     user_id: '00000000-0000-0000-0000-000000000002',
     title: null,
     caption: 'GRWM for New York Fashion Week 👗💅 This look took 2 hours but SO worth it! #fashion #grwm #nyfw #style',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnail_url: 'https://picsum.photos/seed/fashion/1080/1920',
     duration: 28,
     width: 1080,
@@ -100,7 +101,7 @@ export const SEED_VIDEOS: Video[] = [
     user_id: '00000000-0000-0000-0000-000000000003',
     title: null,
     caption: 'This $30 gadget from Amazon is actually INSANE 🤯 Link in bio! #tech #gadgets #amazon #fyp',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnail_url: 'https://picsum.photos/seed/tech/1080/1920',
     duration: 22,
     width: 1080,
@@ -140,13 +141,109 @@ export const SEED_VIDEOS: Video[] = [
     is_liked: false,
     is_bookmarked: false,
   },
+  {
+    id: '30000000-0000-0000-0000-000000000004',
+    user_id: '00000000-0000-0000-0000-000000000004',
+    title: null,
+    caption: 'Homemade spicy ramen from scratch 🍜🔥 Full recipe in comments! #cooking #ramen #foodtok #fyp',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    thumbnail_url: 'https://picsum.photos/seed/ramen/1080/1920',
+    duration: 45,
+    width: 1080,
+    height: 1920,
+    like_count: 312000,
+    comment_count: 7890,
+    share_count: 24100,
+    view_count: 2100000,
+    bookmark_count: 18900,
+    status: 'ready',
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    scheduled_at: null,
+    published_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    created_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000004',
+      clerk_id: 'user_demo4',
+      username: 'chefmaria',
+      display_name: 'Chef Maria',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=maria',
+      bio: 'Home cooking made easy 🍳 | Tokyo',
+      website: null,
+      is_verified: true,
+      is_seller: false,
+      follower_count: 234000,
+      following_count: 890,
+      video_count: 312,
+      like_count: 8900000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000005',
+    user_id: '00000000-0000-0000-0000-000000000005',
+    title: null,
+    caption: 'POV: you found the best hiking trail in Colorado 🏔️⛰️ #hiking #outdoors #colorado #adventure',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    thumbnail_url: 'https://picsum.photos/seed/hiking/1080/1920',
+    duration: 33,
+    width: 1080,
+    height: 1920,
+    like_count: 156700,
+    comment_count: 4230,
+    share_count: 15800,
+    view_count: 980000,
+    bookmark_count: 9200,
+    status: 'ready',
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    scheduled_at: null,
+    published_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+    created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000005',
+      clerk_id: 'user_demo5',
+      username: 'hikingwithkate',
+      display_name: 'Hiking With Kate',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kate',
+      bio: 'Adventure seeker 🏔️ | Colorado',
+      website: null,
+      is_verified: false,
+      is_seller: false,
+      follower_count: 67800,
+      following_count: 412,
+      video_count: 145,
+      like_count: 3400000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
 ]
 
-export function useFeedVideos(tab: 'fyp' | 'following') {
+export function useFeedVideos(tab: FeedTab) {
   const [videos, setVideos] = useState<Video[]>(SEED_VIDEOS)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    // friends and local tabs return empty until Phase 2 (show seed FYP videos)
+    if (tab === 'friends' || tab === 'local') {
+      setVideos([])
+      return
+    }
+
     setIsLoading(true)
     fetch(`/api/videos?tab=${tab}&limit=10`)
       .then((r) => r.json())
@@ -156,7 +253,7 @@ export function useFeedVideos(tab: 'fyp' | 'following') {
         }
       })
       .catch(() => {
-        // Keep seed videos if API fails (e.g., no Supabase configured yet)
+        // Keep seed videos if API fails (e.g., no Supabase env vars yet)
       })
       .finally(() => setIsLoading(false))
   }, [tab])

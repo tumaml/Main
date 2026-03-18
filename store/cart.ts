@@ -69,6 +69,6 @@ export const useCartStore = create<CartState>()(
           return sum + price * i.quantity
         }, 0),
     }),
-    { name: 'demo-cart' }
+    { name: 'mezan-cart' }
   )
 )

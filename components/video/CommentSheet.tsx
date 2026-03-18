@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { X, Send, Heart } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/avatar'
+import { Skeleton } from '@/components/shared/skeleton'
 import { Comment } from '@/types/database'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -47,7 +47,9 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
         setComments((prev) => [data.comment, ...prev])
         setNewComment('')
       }
-    } catch {}
+    } catch {
+      // Silent — comment failed
+    }
     setIsSubmitting(false)
   }
 
@@ -81,7 +83,10 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
         </div>
 
         {/* Comments list */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4" style={{ height: 'calc(70dvh - 120px)' }}>
+        <div
+          className="flex-1 overflow-y-auto px-4 py-3 space-y-4"
+          style={{ height: 'calc(70dvh - 120px)' }}
+        >
           {isLoading
             ? Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex gap-3">
@@ -97,9 +102,7 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
                 <CommentItem key={comment.id} comment={comment} />
               ))}
           {!isLoading && comments.length === 0 && (
-            <p className="text-center text-white/40 text-sm mt-8">
-              Be the first to comment!
-            </p>
+            <p className="text-center text-white/40 text-sm mt-8">Be the first to comment!</p>
           )}
         </div>
 
@@ -130,13 +133,15 @@ function CommentItem({ comment }: { comment: Comment }) {
   return (
     <div className="flex gap-3">
       <Avatar className="w-9 h-9 flex-shrink-0">
-        <AvatarImage src={comment.user?.avatar_url || ''} />
+        <AvatarImage src={comment.user?.avatar_url ?? ''} />
         <AvatarFallback>{comment.user?.username?.[0]?.toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <span className="text-white font-semibold text-xs mr-1">@{comment.user?.username}</span>
+            <span className="text-white font-semibold text-xs mr-1">
+              @{comment.user?.username}
+            </span>
             <p className="text-white/90 text-sm leading-relaxed">{comment.content}</p>
             <div className="flex gap-3 mt-1">
               <span className="text-white/40 text-xs">{timeAgo(comment.created_at)}</span>
