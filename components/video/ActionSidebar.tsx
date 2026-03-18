@@ -4,7 +4,7 @@ import { Heart, MessageCircle, Share2, Bookmark, Music } from 'lucide-react'
 import { cn, formatCount } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/avatar'
 import { Video } from '@/types/database'
-import { useVideoInteractions } from '@/hooks/useVideo'
+import { useVideoInteractions, useFollow } from '@/hooks/useVideo'
 import { useAuth } from '@/hooks/useAuth'
 
 interface ActionSidebarProps {
@@ -14,11 +14,18 @@ interface ActionSidebarProps {
 }
 
 export function ActionSidebar({ video, onComment, onShare }: ActionSidebarProps) {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn, profile } = useAuth()
   const { isLiked, likeCount, isBookmarked, toggleLike, toggleBookmark } = useVideoInteractions(
     video.id,
     video.is_liked,
-    video.like_count
+    video.like_count,
+    video.is_bookmarked
+  )
+
+  // Don't show follow button on own videos
+  const isOwnVideo = profile?.id === video.user_id
+  const { isFollowing, toggleFollow } = useFollow(
+    isOwnVideo ? undefined : video.user_id
   )
 
   const handleLike = () => {
@@ -50,9 +57,17 @@ export function ActionSidebar({ video, onComment, onShare }: ActionSidebarProps)
           <AvatarImage src={video.user?.avatar_url ?? ''} alt={video.user?.username} />
           <AvatarFallback>{video.user?.username?.[0]?.toUpperCase()}</AvatarFallback>
         </Avatar>
-        <button className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-[#FE2C55] rounded-full flex items-center justify-center text-white text-xs font-bold hover:bg-[#e01f45] transition-colors">
-          +
-        </button>
+        {!isOwnVideo && !isFollowing && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              if (isSignedIn) toggleFollow()
+            }}
+            className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-[#FE2C55] rounded-full flex items-center justify-center text-white text-xs font-bold hover:bg-[#e01f45] transition-colors"
+          >
+            +
+          </button>
+        )}
       </div>
 
       {/* Like */}
