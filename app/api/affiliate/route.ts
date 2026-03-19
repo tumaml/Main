@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   return NextResponse.json({ error: 'Affiliate system not implemented yet — Phase 4' }, { status: 501 })
 }
-
+ 
 export async function POST() {
   return NextResponse.json({ error: 'Affiliate system not implemented yet — Phase 4' }, { status: 501 })
 }
