@@ -3,7 +3,7 @@ import { createServerSupabase } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function POST(_request: NextRequest, { params }: Params) {
@@ -17,7 +17,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
   if (!me) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const userId = (me as { id: string }).id
-  const commentId = params.id
+  const { id: commentId } = await params
 
   // Check if already liked
   const { data: existing } = await supabase

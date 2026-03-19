@@ -4,16 +4,17 @@ import { PublicProfileClient } from '@/components/profile/PublicProfileClient'
 import { User } from '@/types/database'
 
 interface UserProfilePageProps {
-  params: { username: string }
+  params: Promise<{ username: string }>
 }
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
+  const { username } = await params
   const supabase = createServerSupabase()
 
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('username', params.username)
+    .eq('username', username)
     .single()
 
   if (error || !data) notFound()
