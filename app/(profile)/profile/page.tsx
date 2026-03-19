@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Settings, Share2, Grid3x3, Heart, Bookmark, UserPlus } from 'lucide-react'
+// Heart kept — used in tab icon array below
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/avatar'
 import { Button } from '@/components/shared/button'
 import { Badge } from '@/components/shared/badge'
 import { Skeleton } from '@/components/shared/skeleton'
+import { VideoGrid } from '@/components/profile/VideoGrid'
 import { formatCount } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { SignInButton, SignUpButton } from '@clerk/nextjs'
@@ -150,27 +152,9 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Video grid placeholder */}
-      <div className="grid grid-cols-3 gap-0.5">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div
-            key={i}
-            className="aspect-[9/16] bg-white/5 relative overflow-hidden"
-            style={{
-              backgroundImage: `url(https://picsum.photos/seed/vid${i}/400/700)`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          >
-            <div className="absolute bottom-1 left-1 flex items-center gap-0.5">
-              <Heart className="w-3 h-3 text-white fill-white" />
-              <span className="text-white text-xs font-semibold drop-shadow">
-                {formatCount(Math.floor(Math.random() * 100000 + 1000))}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {profile?.id && (
+        <VideoGrid userId={profile.id} tab={activeTab} />
+      )}
     </div>
   )
 }
