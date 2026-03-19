@@ -35,13 +35,11 @@ export async function POST(_request: NextRequest, { params }: Params) {
       .eq('user_id', userId)
       .eq('comment_id', commentId)
 
-    await supabase.rpc('decrement_comment_likes', { comment_id: commentId }).catch(() => {
-      // RPC may not exist; fallback to raw update
-      supabase
-        .from('comments')
-        .update({ like_count: 0 } as never)
-        .eq('id', commentId)
-    })
+    try {
+      await supabase.rpc('decrement_comment_likes', { comment_id: commentId })
+    } catch {
+      // RPC may not exist; no-op
+    }
 
     return NextResponse.json({ liked: false })
   } else {
