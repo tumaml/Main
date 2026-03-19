@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Video } from '@/types/database'
-import type { FeedTab } from '@/components/shared/FeedHeader'
+import type { FeedTab, FeedFilter } from '@/components/shared/FeedHeader'
 
 // Seed videos — shown until Supabase responds (or when env vars aren't configured)
 export const SEED_VIDEOS: Video[] = [
@@ -314,30 +314,33 @@ export const SEED_VIDEOS: Video[] = [
   },
 ]
 
-export function useFeedVideos(tab: FeedTab) {
+export function useFeedVideos(tab: FeedTab, filter: FeedFilter = 'all') {
   const [videos, setVideos] = useState<Video[]>(SEED_VIDEOS)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    // friends and local tabs return empty until Phase 2 (show seed FYP videos)
     if (tab === 'friends' || tab === 'local') {
       setVideos([])
       return
     }
 
     setIsLoading(true)
-    fetch(`/api/videos?tab=${tab}&limit=10`)
+    const params = new URLSearchParams({ tab, limit: '10' })
+    if (filter === 'product') params.set('type', 'product')
+    if (filter === 'service') params.set('type', 'service')
+    if (filter === 'under10') params.set('max_price', '1000')
+    if (filter === 'used') params.set('condition', 'used')
+    if (filter === 'new') params.set('condition', 'new')
+
+    fetch(`/api/videos?${params}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.videos?.length > 0) {
-          setVideos(data.videos)
-        }
+        if (data.videos?.length > 0) setVideos(data.videos)
+        // keep seed if empty (no Supabase configured yet)
       })
-      .catch(() => {
-        // Keep seed videos if API fails (e.g., no Supabase env vars yet)
-      })
+      .catch(() => {})
       .finally(() => setIsLoading(false))
-  }, [tab])
+  }, [tab, filter])
 
   return { videos, isLoading }
 }

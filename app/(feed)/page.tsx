@@ -2,21 +2,27 @@
 
 import { useState } from 'react'
 import { VideoFeed } from '@/components/video/VideoFeed'
-import { FeedHeader, type FeedTab } from '@/components/shared/FeedHeader'
+import { FeedHeader, type FeedTab, type FeedFilter } from '@/components/shared/FeedHeader'
 import { useFeedVideos } from '@/hooks/useFeedVideos'
 
 export default function FYPPage() {
   const [activeTab, setActiveTab] = useState<FeedTab>('fyp')
-  const { videos, isLoading } = useFeedVideos(activeTab)
+  const [activeFilter, setActiveFilter] = useState<FeedFilter>('all')
+  const { videos, isLoading } = useFeedVideos(activeTab, activeFilter)
 
   return (
     <>
-      <FeedHeader activeTab={activeTab} onTabChange={setActiveTab} />
+      <FeedHeader
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab) }}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
 
       {isLoading && videos.length === 0 ? (
         <FeedSkeleton />
       ) : (
-        <VideoFeed key={activeTab} initialVideos={videos} tab={activeTab} />
+        <VideoFeed key={`${activeTab}-${activeFilter}`} initialVideos={videos} tab={activeTab} />
       )}
     </>
   )

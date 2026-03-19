@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'react-hot-toast'
 import { QueryProvider } from '@/components/shared/QueryProvider'
+import { LocaleProvider } from '@/components/shared/LocaleProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <QueryProvider>
       <html lang="en" className="dark">
         <body className="font-sans bg-black text-white antialiased">
+          <LocaleProvider>
           {children}
+          </LocaleProvider>
           <Toaster
             position="top-center"
             toastOptions={{

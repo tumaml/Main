@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "home": "Home",
+    "discover": "Discover",
+    "upload": "Upload",
+    "shop": "Shop",
+    "profile": "Profile",
+    "inbox": "Inbox"
+  },
+  "feed": {
+    "forYou": "For You",
+    "following": "Following",
+    "friends": "Friends",
+    "nearby": "Nearby"
+  },
+  "filters": {
+    "all": "All",
+    "products": "Products",
+    "services": "Services",
+    "under10": "Under 10 JOD",
+    "used": "Used",
+    "new": "New"
+  },
+  "actions": {
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share",
+    "save": "Save",
+    "addToCart": "Add to Cart",
+    "bookNow": "Book Now",
+    "contactSeller": "Contact Seller",
+    "verifiedSeller": "Verified Seller",
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Unfollow"
+  },
+  "upload": {
+    "postVideo": "Post Listing",
+    "selectVideo": "Select video to upload",
+    "caption": "Caption",
+    "title": "Title",
+    "description": "Description",
+    "price": "Price",
+    "category": "Category",
+    "condition": "Condition",
+    "new": "New",
+    "used": "Used",
+    "refurbished": "Refurbished",
+    "product": "Selling a Product",
+    "service": "Offering a Service",
+    "privacy": "Who can see this listing",
+    "everyone": "Everyone",
+    "friends": "Friends",
+    "onlyMe": "Only me",
+    "hashtags": "Hashtags",
+    "inventory": "Inventory",
+    "location": "Location",
+    "posting": "Posting..."
+  },
+  "shop": {
+    "flashDeals": "Flash Deals",
+    "trending": "Trending",
+    "seeAll": "See all",
+    "addToCart": "Add to Cart",
+    "sold": "sold",
+    "rating": "Rating",
+    "noProducts": "No products yet",
+    "listFirst": "List your first product"
+  },
+  "search": {
+    "placeholder": "Search videos, users, sounds...",
+    "cancel": "Cancel",
+    "noResults": "No results for",
+    "accounts": "Accounts",
+    "videos": "Videos",
+    "products": "Products",
+    "users": "Users",
+    "top": "Top",
+    "hashtags": "Hashtags"
+  },
+  "comments": {
+    "beFirst": "Be the first to comment!",
+    "addComment": "Add a comment...",
+    "replyingTo": "Replying to"
+  }
+}
