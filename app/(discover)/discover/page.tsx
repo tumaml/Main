@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, X, TrendingUp, Hash } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, X, TrendingUp, Hash, Heart, Users } from 'lucide-react'
 import Link from 'next/link'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/avatar'
+import { Skeleton } from '@/components/shared/skeleton'
 import { cn, formatCount } from '@/lib/utils'
 
 const TRENDING_HASHTAGS = [
@@ -122,25 +124,163 @@ export default function DiscoverPage() {
   )
 }
 
+interface SearchVideo {
+  id: string
+  caption: string
+  thumbnail_url: string | null
+  like_count: number
+  view_count: number
+  user?: { id: string; username: string; display_name: string; avatar_url: string | null }
+}
+
+interface SearchUser {
+  id: string
+  username: string
+  display_name: string
+  avatar_url: string | null
+  is_verified: boolean
+  follower_count: number
+  video_count: number
+}
+
+type SearchTab = 'Top' | 'Users' | 'Videos'
+
 function SearchResults({ query }: { query: string }) {
+  const [activeTab, setActiveTab] = useState<SearchTab>('Top')
+  const [videos, setVideos] = useState<SearchVideo[]>([])
+  const [users, setUsers] = useState<SearchUser[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  const fetchResults = useCallback(async (q: string, tab: SearchTab) => {
+    setIsLoading(true)
+    const type = tab === 'Videos' ? 'videos' : tab === 'Users' ? 'users' : 'all'
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}`)
+      const data = await res.json()
+      setVideos(data.videos || [])
+      setUsers(data.users || [])
+    } catch {
+      // silent
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (query.trim()) fetchResults(query, activeTab)
+  }, [query, activeTab, fetchResults])
+
+  const TABS: SearchTab[] = ['Top', 'Users', 'Videos']
+
   return (
     <div className="px-4 pt-2">
       <div className="flex gap-4 border-b border-white/10 mb-4 overflow-x-auto hide-scrollbar">
-        {['Top', 'Users', 'Videos', 'Sounds', 'Hashtags', 'Products', 'LIVE'].map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab}
+            onClick={() => setActiveTab(tab)}
             className={cn(
               'pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0',
-              tab === 'Top' ? 'border-white text-white' : 'border-transparent text-white/50'
+              activeTab === tab ? 'border-white text-white' : 'border-transparent text-white/50'
             )}
           >
             {tab}
           </button>
         ))}
       </div>
-      <p className="text-white/40 text-sm text-center mt-12">
-        Search results for &quot;{query}&quot;
-      </p>
+
+      {isLoading ? (
+        <div className="space-y-4 mt-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex gap-3 items-center">
+              <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Users section */}
+          {(activeTab === 'Top' || activeTab === 'Users') && users.length > 0 && (
+            <section className="mb-6">
+              {activeTab === 'Top' && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-white/50" />
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-wide">Accounts</span>
+                </div>
+              )}
+              <div className="space-y-3">
+                {users.map((user) => (
+                  <Link
+                    key={user.id}
+                    href={`/profile/${user.username}`}
+                    className="flex items-center gap-3 hover:bg-white/5 rounded-xl p-2 -mx-2 transition-colors"
+                  >
+                    <Avatar className="w-12 h-12 flex-shrink-0">
+                      <AvatarImage src={user.avatar_url ?? ''} />
+                      <AvatarFallback>{user.display_name?.[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-semibold text-sm truncate">{user.display_name}</p>
+                      <p className="text-white/50 text-xs">@{user.username}</p>
+                      <p className="text-white/40 text-xs">{formatCount(user.follower_count)} followers · {formatCount(user.video_count)} videos</p>
+                    </div>
+                    {user.is_verified && (
+                      <span className="text-[#20D5EC] text-xs">✓</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Videos section */}
+          {(activeTab === 'Top' || activeTab === 'Videos') && videos.length > 0 && (
+            <section>
+              {activeTab === 'Top' && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Heart className="w-4 h-4 text-white/50" />
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-wide">Videos</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                {videos.map((video) => (
+                  <Link key={video.id} href={`/video/${video.id}`}>
+                    <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-white/5">
+                      {video.thumbnail_url ? (
+                        <img
+                          src={video.thumbnail_url}
+                          alt={video.caption}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-white/10" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <p className="text-white text-xs line-clamp-2 leading-tight">{video.caption}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Heart className="w-3 h-3 text-white fill-white" />
+                          <span className="text-white/70 text-[10px]">{formatCount(video.like_count)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {videos.length === 0 && users.length === 0 && (
+            <p className="text-white/40 text-sm text-center mt-12">
+              No results for &ldquo;{query}&rdquo;
+            </p>
+          )}
+        </>
+      )}
     </div>
   )
 }
