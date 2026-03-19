@@ -2,13 +2,90 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
-import { VolumeX, Volume2 } from 'lucide-react'
+import { VolumeX, Volume2, ShoppingCart, CalendarDays, MessageCircle } from 'lucide-react'
 import { Video } from '@/types/database'
 import { VideoPlayer } from './VideoPlayer'
 import { ActionSidebar } from './ActionSidebar'
 import { Caption } from './Caption'
 import { CommentSheet } from './CommentSheet'
 import { usePlayerStore } from '@/store/player'
+import { useCartStore } from '@/store/cart'
+import { formatPrice } from '@/lib/utils'
+
+// ─── Commerce Overlay ─────────────────────────────────────────────────────────
+
+function CommerceOverlay({ video }: { video: Video }) {
+  const addItem = useCartStore((s) => s.addItem)
+  const product = video.linked_product
+
+  const displayPrice = product?.price ?? video.price
+  const displayTitle = product?.title ?? video.title ?? ''
+  const isService = video.listing_type === 'service'
+
+  const handleAction = () => {
+    if (isService) return // Book Now — placeholder for phase 2 booking flow
+    if (product) addItem(product)
+  }
+
+  const handleContact = () => {
+    // Opens DM — placeholder until inbox is wired to video context
+    window.location.href = `/inbox`
+  }
+
+  return (
+    <div className="absolute left-4 right-20 z-10 pb-safe"
+      style={{ bottom: video.caption ? '120px' : '80px' }}
+    >
+      <div className="bg-black/70 backdrop-blur-md rounded-2xl px-3 py-2.5 border border-white/10 flex items-center gap-3">
+        {/* Product thumbnail */}
+        {product?.images?.[0] && (
+          <img
+            src={product.images[0]}
+            alt={displayTitle}
+            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+          />
+        )}
+
+        {/* Title + price */}
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-semibold text-xs truncate">{displayTitle}</p>
+          {displayPrice != null && (
+            <p className="text-[#FE2C55] font-bold text-sm">{formatPrice(displayPrice)}</p>
+          )}
+        </div>
+
+        {/* CTA button */}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <button
+            onClick={handleAction}
+            className="flex items-center gap-1.5 bg-[#FE2C55] hover:bg-[#e01f45] active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-all"
+          >
+            {isService ? (
+              <>
+                <CalendarDays className="w-3 h-3" />
+                Book Now
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-3 h-3" />
+                Add to Cart
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleContact}
+            className="flex items-center gap-1 text-white/60 text-[10px] hover:text-white/90 transition-colors"
+          >
+            <MessageCircle className="w-3 h-3" />
+            Contact Seller
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Feed Item ─────────────────────────────────────────────────────────────────
 
 interface FeedItemProps {
   video: Video
@@ -64,6 +141,11 @@ export function FeedItem({ video, isActive: _isActive, onActivate }: FeedItemPro
           onComment={() => setShowComments(true)}
         />
       </div>
+
+      {/* Commerce overlay — shown when video has a listing */}
+      {video.listing_type && (
+        <CommerceOverlay video={video} />
+      )}
 
       {/* Bottom caption strip */}
       <div className="absolute bottom-4 left-4 right-20 z-10 pb-safe">

@@ -44,14 +44,19 @@ export function Caption({ video }: CaptionProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Username */}
-      <Link href={`/${video.user?.username}`} className="flex items-center gap-2">
+      {/* Username + verified seller badge */}
+      <Link href={`/${video.user?.username}`} className="flex items-center gap-2 flex-wrap">
         <span className="text-white font-bold text-sm hover:underline drop-shadow-md">
           @{video.user?.username}
         </span>
-        {video.user?.is_verified && (
+        {video.user?.is_verified && !video.user?.is_seller && (
           <span className="w-4 h-4 bg-[#FE2C55] rounded-full flex items-center justify-center text-white text-[10px] font-bold">
             ✓
+          </span>
+        )}
+        {video.user?.is_verified && video.user?.is_seller && (
+          <span className="flex items-center gap-1 bg-[#20D5EC]/20 border border-[#20D5EC]/40 text-[#20D5EC] text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+            ✓ Verified Seller
           </span>
         )}
       </Link>
