@@ -5,15 +5,18 @@ import { FeedItem } from '@/components/video/FeedItem'
 import { Video } from '@/types/database'
 import { usePlayerStore } from '@/store/player'
 import { useInfiniteVideos } from '@/hooks/useInfiniteVideos'
+import type { FeedTab, FeedFilter } from '@/components/shared/FeedHeader'
 
 interface VideoFeedProps {
   initialVideos: Video[]
-  tab: 'fyp' | 'following' | 'friends' | 'local'
+  tab: FeedTab
+  filter?: FeedFilter
 }
 
-export function VideoFeed({ initialVideos, tab }: VideoFeedProps) {
+export function VideoFeed({ initialVideos, tab, filter = 'all' }: VideoFeedProps) {
   const { videos, isLoading, hasMore, loadMore } = useInfiniteVideos({
     tab,
+    filter,
     initialVideos,
   })
   const { setCurrentVideoId, setCurrentIndex, currentVideoId } = usePlayerStore()

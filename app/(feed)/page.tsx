@@ -22,7 +22,7 @@ export default function FYPPage() {
       {isLoading && videos.length === 0 ? (
         <FeedSkeleton />
       ) : (
-        <VideoFeed key={`${activeTab}-${activeFilter}`} initialVideos={videos} tab={activeTab} />
+        <VideoFeed key={`${activeTab}-${activeFilter}`} initialVideos={videos} tab={activeTab} filter={activeFilter} />
       )}
     </>
   )
