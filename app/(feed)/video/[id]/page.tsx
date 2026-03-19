@@ -4,16 +4,17 @@ import { VideoPageClient } from './VideoPageClient'
 import { Video } from '@/types/database'
 
 interface VideoPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function VideoPage({ params }: VideoPageProps) {
+  const { id } = await params
   const supabase = createServerSupabase()
 
   const { data } = await supabase
     .from('videos')
     .select('*, user:users(id, username, display_name, avatar_url, is_verified, follower_count)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!data) notFound()
