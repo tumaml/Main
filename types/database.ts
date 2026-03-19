@@ -50,10 +50,18 @@ export interface Video {
   tags: string[]
   created_at: string
   updated_at: string
+  // Marketplace fields (added in 003_marketplace_fields.sql)
+  listing_type: 'product' | 'service' | null
+  title: string | null
+  price: number | null
+  currency: string | null
+  condition: 'new' | 'used' | 'refurbished' | null
+  location: string | null
   // Joined fields (not in DB columns)
   user?: User
   is_liked?: boolean
   is_bookmarked?: boolean
+  linked_product?: Product | null
 }
 
 export interface Follow {
@@ -165,6 +173,10 @@ export interface Product {
   review_count: number
   sold_count: number
   stripe_price_id: string | null
+  // Marketplace fields (added in 003_marketplace_fields.sql)
+  listing_type: 'product' | 'service' | null
+  condition: 'new' | 'used' | 'refurbished' | null
+  location: string | null
   created_at: string
   updated_at: string
   // Joined fields
@@ -283,7 +295,7 @@ export interface Database {
   public: {
     Tables: {
       users:             { Row: User;         Insert: Omit<User, 'created_at' | 'updated_at'>; Update: Partial<Omit<User, 'id'>> }
-      videos:            { Row: Video;        Insert: Omit<Video, 'created_at' | 'updated_at' | 'like_count' | 'comment_count' | 'share_count' | 'bookmark_count' | 'view_count'>; Update: Partial<Omit<Video, 'id'>> }
+      videos:            { Row: Video;        Insert: Omit<Video, 'created_at' | 'updated_at' | 'like_count' | 'comment_count' | 'share_count' | 'bookmark_count' | 'view_count' | 'user' | 'is_liked' | 'is_bookmarked' | 'linked_product'>; Update: Partial<Omit<Video, 'id'>> }
       follows:           { Row: Follow;       Insert: Omit<Follow, 'created_at'>;       Update: never }
       video_likes:       { Row: VideoLike;    Insert: Omit<VideoLike, 'created_at'>;    Update: never }
       bookmarks:         { Row: Bookmark;     Insert: Omit<Bookmark, 'created_at'>;     Update: never }

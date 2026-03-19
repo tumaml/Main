@@ -4,10 +4,13 @@ import { auth } from '@clerk/nextjs/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const tab    = searchParams.get('tab') || 'fyp'
-  const cursor = searchParams.get('cursor')
-  const userId = searchParams.get('userId')
-  const limit  = Math.min(parseInt(searchParams.get('limit') || '10'), 20)
+  const tab          = searchParams.get('tab') || 'fyp'
+  const cursor       = searchParams.get('cursor')
+  const userId       = searchParams.get('userId')
+  const limit        = Math.min(parseInt(searchParams.get('limit') || '10'), 20)
+  const listingType  = searchParams.get('type')       // 'product' | 'service' | null
+  const maxPrice     = searchParams.get('max_price')  // in cents
+  const condition    = searchParams.get('condition')  // 'new' | 'used' | 'refurbished' | null
 
   const supabase = createServerSupabase()
   const { userId: clerkId } = await auth()
@@ -16,13 +19,22 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase
       .from('videos')
-      .select('*, user:users(id, username, display_name, avatar_url, is_verified, follower_count)')
+      .select(`
+        *,
+        user:users(id, username, display_name, avatar_url, is_verified, follower_count),
+        linked_product:video_products(
+          product:products(id, title, price, compare_price, currency, images, listing_type, condition, rating, sold_count, is_active)
+        )
+      `)
       .eq('privacy', 'public')
       .order('created_at', { ascending: false })
       .limit(limit + 1)
 
     if (userId) query = query.eq('user_id', userId)
     if (cursor) query = query.lt('created_at', cursor)
+    if (listingType) query = query.eq('listing_type', listingType)
+    if (maxPrice) query = query.lte('price', parseInt(maxPrice))
+    if (condition) query = query.eq('condition', condition)
 
     // For following/friends tabs, scope to relevant user IDs
     if ((tab === 'following' || tab === 'friends') && clerkId) {
@@ -98,6 +110,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Flatten linked_product: video_products join returns array; take first product
+    sliced.forEach((v) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = v.linked_product as any
+      if (Array.isArray(raw) && raw.length > 0) {
+        v.linked_product = raw[0]?.product ?? null
+      } else {
+        v.linked_product = null
+      }
+    })
+
     return NextResponse.json({ videos: sliced, nextCursor })
   } catch (err) {
     console.error('GET /api/videos error:', err)
@@ -120,6 +143,12 @@ export async function POST(request: NextRequest) {
       width?: number
       height?: number
       privacy?: 'public' | 'friends' | 'private'
+      listingType?: 'product' | 'service'
+      title?: string
+      price?: number
+      currency?: string
+      condition?: 'new' | 'used' | 'refurbished'
+      location?: string
     }
 
     const { data: me } = await supabase
@@ -135,10 +164,16 @@ export async function POST(request: NextRequest) {
         thumbnail_url: body.thumbnailUrl ?? null,
         caption:       body.caption ?? '',
         duration:      body.duration ?? null,
-        width:         body.width   ?? null,
-        height:        body.height  ?? null,
-        privacy:       body.privacy ?? 'public',
-      })
+        width:         body.width    ?? null,
+        height:        body.height   ?? null,
+        privacy:       body.privacy  ?? 'public',
+        listing_type:  body.listingType  ?? null,
+        title:         body.title        ?? null,
+        price:         body.price        ?? null,
+        currency:      body.currency     ?? 'JOD',
+        condition:     body.condition    ?? null,
+        location:      body.location     ?? null,
+      } as never)
       .select('*, user:users(id, username, display_name, avatar_url)')
       .single()
 
