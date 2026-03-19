@@ -1,24 +1,18 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Search, X, TrendingUp, Hash, Heart, Users } from 'lucide-react'
+import { Search, X, TrendingUp, Hash, Heart, Users, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/avatar'
 import { Skeleton } from '@/components/shared/skeleton'
+import { ProductCard, ProductCardSkeleton } from '@/components/shop/ProductCard'
+import { Product } from '@/types/database'
 import { cn, formatCount } from '@/lib/utils'
 
-const TRENDING_HASHTAGS = [
-  { name: 'fyp', count: 9800000 },
-  { name: 'viral', count: 7200000 },
-  { name: 'dance', count: 8900000 },
-  { name: 'food', count: 5600000 },
-  { name: 'fashion', count: 4100000 },
-  { name: 'travel', count: 3400000 },
-  { name: 'tech', count: 2800000 },
-  { name: 'comedy', count: 6300000 },
-  { name: 'beauty', count: 3900000 },
-  { name: 'fitness', count: 2100000 },
-]
+interface HashtagItem {
+  name: string
+  count: number
+}
 
 const CATEGORIES = [
   { name: 'For You', emoji: '✨', color: 'from-purple-500 to-pink-500' },
@@ -34,6 +28,57 @@ const CATEGORIES = [
   { name: 'Gaming', emoji: '🎮', color: 'from-indigo-500 to-blue-500' },
   { name: 'Music', emoji: '🎵', color: 'from-cyan-400 to-blue-400' },
 ]
+
+function TrendingHashtags() {
+  const [hashtags, setHashtags] = useState<HashtagItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/hashtags?limit=10')
+      .then((r) => r.json())
+      .then((data) => setHashtags(data.hashtags ?? []))
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="w-4 h-4 text-[#FE2C55]" />
+        <h2 className="text-white font-bold text-base">Trending</h2>
+      </div>
+      <div className="space-y-1">
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-2.5 px-2">
+                <Skeleton className="w-5 h-4 rounded" />
+                <Skeleton className="w-10 h-10 rounded-xl" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))
+          : hashtags.map(({ name, count }, i) => (
+              <Link
+                key={name}
+                href={`/discover/hashtag/${name}`}
+                className="flex items-center gap-3 py-2.5 hover:bg-white/5 rounded-xl px-2 transition-colors"
+              >
+                <span className="text-white/30 text-sm font-mono w-5 text-center">{i + 1}</span>
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Hash className="w-5 h-5 text-white/60" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm">#{name}</p>
+                  <p className="text-white/40 text-xs">{formatCount(count)} videos</p>
+                </div>
+              </Link>
+            ))}
+      </div>
+    </section>
+  )
+}
 
 export default function DiscoverPage() {
   const [query, setQuery] = useState('')
@@ -52,7 +97,7 @@ export default function DiscoverPage() {
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Search videos, users, sounds..."
+              placeholder="Search videos, products, users..."
               className="flex-1 bg-transparent text-white text-sm placeholder:text-white/40 outline-none"
             />
             {query && (
@@ -94,35 +139,14 @@ export default function DiscoverPage() {
             </div>
           </section>
 
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-4 h-4 text-[#FE2C55]" />
-              <h2 className="text-white font-bold text-base">Trending</h2>
-            </div>
-            <div className="space-y-1">
-              {TRENDING_HASHTAGS.map(({ name, count }, i) => (
-                <Link
-                  key={name}
-                  href={`/discover/hashtag/${name}`}
-                  className="flex items-center gap-3 py-2.5 hover:bg-white/5 rounded-xl px-2 transition-colors"
-                >
-                  <span className="text-white/30 text-sm font-mono w-5 text-center">{i + 1}</span>
-                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Hash className="w-5 h-5 text-white/60" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm">#{name}</p>
-                    <p className="text-white/40 text-xs">{formatCount(count)} videos</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+          <TrendingHashtags />
         </div>
       )}
     </div>
   )
 }
+
+// ─── Search types ──────────────────────────────────────────────────────────────
 
 interface SearchVideo {
   id: string
@@ -143,22 +167,29 @@ interface SearchUser {
   video_count: number
 }
 
-type SearchTab = 'Top' | 'Users' | 'Videos'
+type SearchTab = 'Top' | 'Videos' | 'Products' | 'Users' | 'Hashtags'
 
 function SearchResults({ query }: { query: string }) {
   const [activeTab, setActiveTab] = useState<SearchTab>('Top')
   const [videos, setVideos] = useState<SearchVideo[]>([])
   const [users, setUsers] = useState<SearchUser[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const fetchResults = useCallback(async (q: string, tab: SearchTab) => {
     setIsLoading(true)
-    const type = tab === 'Videos' ? 'videos' : tab === 'Users' ? 'users' : 'all'
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}`)
-      const data = await res.json()
-      setVideos(data.videos || [])
-      setUsers(data.users || [])
+      if (tab === 'Products') {
+        const res = await fetch(`/api/products?q=${encodeURIComponent(q)}&limit=20`)
+        const data = await res.json() as { products: Product[] }
+        setProducts(data.products ?? [])
+      } else {
+        const type = tab === 'Videos' ? 'videos' : tab === 'Users' ? 'users' : 'all'
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}`)
+        const data = await res.json() as { videos: SearchVideo[]; users: SearchUser[] }
+        setVideos(data.videos ?? [])
+        setUsers(data.users ?? [])
+      }
     } catch {
       // silent
     } finally {
@@ -170,7 +201,7 @@ function SearchResults({ query }: { query: string }) {
     if (query.trim()) fetchResults(query, activeTab)
   }, [query, activeTab, fetchResults])
 
-  const TABS: SearchTab[] = ['Top', 'Users', 'Videos']
+  const TABS: SearchTab[] = ['Top', 'Videos', 'Products', 'Users', 'Hashtags']
 
   return (
     <div className="px-4 pt-2">
@@ -203,6 +234,23 @@ function SearchResults({ query }: { query: string }) {
         </div>
       ) : (
         <>
+          {/* Products section */}
+          {(activeTab === 'Top' || activeTab === 'Products') && products.length > 0 && (
+            <section className="mb-6">
+              {activeTab === 'Top' && (
+                <div className="flex items-center gap-2 mb-3">
+                  <ShoppingBag className="w-4 h-4 text-white/50" />
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-wide">Products</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                {isLoading
+                  ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+                  : products.map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          )}
+
           {/* Users section */}
           {(activeTab === 'Top' || activeTab === 'Users') && users.length > 0 && (
             <section className="mb-6">
@@ -226,11 +274,11 @@ function SearchResults({ query }: { query: string }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-semibold text-sm truncate">{user.display_name}</p>
                       <p className="text-white/50 text-xs">@{user.username}</p>
-                      <p className="text-white/40 text-xs">{formatCount(user.follower_count)} followers · {formatCount(user.video_count)} videos</p>
+                      <p className="text-white/40 text-xs">
+                        {formatCount(user.follower_count)} followers · {formatCount(user.video_count)} videos
+                      </p>
                     </div>
-                    {user.is_verified && (
-                      <span className="text-[#20D5EC] text-xs">✓</span>
-                    )}
+                    {user.is_verified && <span className="text-[#20D5EC] text-xs">✓</span>}
                   </Link>
                 ))}
               </div>
@@ -239,7 +287,7 @@ function SearchResults({ query }: { query: string }) {
 
           {/* Videos section */}
           {(activeTab === 'Top' || activeTab === 'Videos') && videos.length > 0 && (
-            <section>
+            <section className="mb-6">
               {activeTab === 'Top' && (
                 <div className="flex items-center gap-2 mb-3">
                   <Heart className="w-4 h-4 text-white/50" />
@@ -251,11 +299,7 @@ function SearchResults({ query }: { query: string }) {
                   <Link key={video.id} href={`/video/${video.id}`}>
                     <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-white/5">
                       {video.thumbnail_url ? (
-                        <img
-                          src={video.thumbnail_url}
-                          alt={video.caption}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={video.thumbnail_url} alt={video.caption} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-white/10" />
                       )}
@@ -274,11 +318,22 @@ function SearchResults({ query }: { query: string }) {
             </section>
           )}
 
-          {videos.length === 0 && users.length === 0 && (
+          {/* Hashtags placeholder */}
+          {activeTab === 'Hashtags' && (
             <p className="text-white/40 text-sm text-center mt-12">
-              No results for &ldquo;{query}&rdquo;
+              Hashtag search coming soon
             </p>
           )}
+
+          {/* Empty state */}
+          {activeTab !== 'Hashtags' &&
+            videos.length === 0 &&
+            users.length === 0 &&
+            products.length === 0 && (
+              <p className="text-white/40 text-sm text-center mt-12">
+                No results for &ldquo;{query}&rdquo;
+              </p>
+            )}
         </>
       )}
     </div>
