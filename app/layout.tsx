@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'react-hot-toast'
+import { QueryProvider } from '@/components/shared/QueryProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
+      <QueryProvider>
       <html lang="en" className="dark">
         <body className="font-sans bg-black text-white antialiased">
           {children}
@@ -46,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         </body>
       </html>
+      </QueryProvider>
     </ClerkProvider>
   )
 }

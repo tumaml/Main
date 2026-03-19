@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, Search, Star, Zap, ChevronRight } from 'lucide-react'
+import { ShoppingCart, Search, Zap, ChevronRight } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cart'
-import { formatPrice, formatCount } from '@/lib/utils'
+import { ProductCard, ProductCardSkeleton } from '@/components/shop/ProductCard'
+import { Product } from '@/types/database'
 import { cn } from '@/lib/utils'
 
 const CATEGORIES = [
@@ -12,93 +14,58 @@ const CATEGORIES = [
   { name: 'Beauty', emoji: '💄' },
   { name: 'Fashion', emoji: '👗' },
   { name: 'Electronics', emoji: '📱' },
-  { name: 'Home', emoji: '🏠' },
-  { name: 'Food', emoji: '🍜' },
+  { name: 'Home & Garden', emoji: '🏠' },
+  { name: 'Food & Beverage', emoji: '🍜' },
   { name: 'Sports', emoji: '⚽' },
+  { name: 'Services', emoji: '🔧' },
 ]
 
-const FLASH_DEALS = [
-  {
-    id: '1',
-    name: 'Glazed Donut Lip Oil',
-    price: 899,
-    originalPrice: 1499,
-    image: 'https://picsum.photos/seed/lip1/400/400',
-    rating: 4.9,
-    sold: 2341,
-  },
-  {
-    id: '2',
-    name: 'Y2K Butterfly Crop Top',
-    price: 1799,
-    originalPrice: 2999,
-    image: 'https://picsum.photos/seed/top1/400/400',
-    rating: 4.7,
-    sold: 892,
-  },
-  {
-    id: '3',
-    name: 'Portable LED Ring Light',
-    price: 1299,
-    originalPrice: 2499,
-    image: 'https://picsum.photos/seed/led1/400/400',
-    rating: 4.6,
-    sold: 1203,
-  },
-]
-
-const TRENDING_PRODUCTS = [
-  {
-    id: '4',
-    name: 'Viral Cleansing Balm',
-    price: 2199,
-    image: 'https://picsum.photos/seed/balm/400/400',
-    rating: 4.8,
-    sold: 8920,
-    store: 'K-Beauty Official',
-  },
-  {
-    id: '5',
-    name: 'Aesthetic Desk Lamp',
-    price: 3499,
-    image: 'https://picsum.photos/seed/lamp/400/400',
-    rating: 4.5,
-    sold: 3421,
-    store: 'DeskVibe',
-  },
-  {
-    id: '6',
-    name: 'Cottagecore Dress',
-    price: 4599,
-    image: 'https://picsum.photos/seed/dress/400/400',
-    rating: 4.6,
-    sold: 1892,
-    store: 'Vintage Finds',
-  },
-  {
-    id: '7',
-    name: 'Spicy Ramen Kit x3',
-    price: 1599,
-    image: 'https://picsum.photos/seed/ramen/400/400',
-    rating: 4.9,
-    sold: 12043,
-    store: 'Noodle Box',
-  },
-]
+async function fetchProducts(params: URLSearchParams): Promise<Product[]> {
+  const res = await fetch(`/api/products?${params}`)
+  if (!res.ok) return []
+  const data = await res.json() as { products: Product[] }
+  return data.products ?? []
+}
 
 export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const totalItems = useCartStore((s) => s.totalItems())
 
+  const categoryParam = activeCategory !== 'All' ? activeCategory : ''
+
+  const { data: flashDeals = [], isLoading: flashLoading } = useQuery({
+    queryKey: ['products', 'flash', categoryParam],
+    queryFn: () => {
+      const params = new URLSearchParams({ sort: 'trending', limit: '6' })
+      if (categoryParam) params.set('category', categoryParam)
+      return fetchProducts(params)
+    },
+  })
+
+  const { data: trending = [], isLoading: trendingLoading } = useQuery({
+    queryKey: ['products', 'trending', categoryParam],
+    queryFn: () => {
+      const params = new URLSearchParams({ sort: 'newest', limit: '8' })
+      if (categoryParam) params.set('category', categoryParam)
+      return fetchProducts(params)
+    },
+  })
+
+  // Filter flash deals: those with compare_price (discounted)
+  const deals = flashDeals.filter((p) => p.compare_price != null).slice(0, 6)
+  // If no deals, show all trending products as flash deals
+  const displayDeals = deals.length > 0 ? deals : flashDeals.slice(0, 4)
+
   return (
     <div className="pb-20">
+      {/* Header */}
       <div className="sticky top-0 z-30 bg-black border-b border-white/10 px-4 pt-safe">
         <div className="flex items-center justify-between py-3">
           <h1 className="text-white font-bold text-xl">Shop</h1>
           <div className="flex items-center gap-3">
-            <button>
+            <Link href="/discover?q=">
               <Search className="w-5 h-5 text-white" />
-            </button>
+            </Link>
             <Link href="/shop/cart" className="relative">
               <ShoppingCart className="w-5 h-5 text-white" />
               {totalItems > 0 && (
@@ -110,6 +77,7 @@ export default function ShopPage() {
           </div>
         </div>
 
+        {/* Category pills */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-3">
           {CATEGORIES.map(({ name, emoji }) => (
             <button
@@ -129,6 +97,7 @@ export default function ShopPage() {
       </div>
 
       <div className="space-y-6 px-4 pt-4">
+        {/* Flash Deals */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -141,47 +110,17 @@ export default function ShopPage() {
           </div>
 
           <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-            {FLASH_DEALS.map((deal) => {
-              const discount = Math.round((1 - deal.price / deal.originalPrice) * 100)
-              return (
-                <div
-                  key={deal.id}
-                  className="w-40 flex-shrink-0 bg-white/5 rounded-2xl overflow-hidden border border-white/10"
-                >
-                  <div className="relative">
-                    <img src={deal.image} alt={deal.name} className="w-full h-40 object-cover" />
-                    <span className="absolute top-2 left-2 bg-[#FE2C55] text-white text-xs font-bold px-1.5 py-0.5 rounded-md">
-                      -{discount}%
-                    </span>
-                  </div>
-                  <div className="p-2.5 space-y-1">
-                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight">
-                      {deal.name}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[#FE2C55] font-bold text-sm">
-                        {formatPrice(deal.price)}
-                      </span>
-                      <span className="text-white/30 text-xs line-through">
-                        {formatPrice(deal.originalPrice)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                      <span className="text-white/60 text-xs">
-                        {deal.rating} · {formatCount(deal.sold)} sold
-                      </span>
-                    </div>
-                    <button className="w-full bg-[#FE2C55] text-white text-xs font-bold py-1.5 rounded-lg hover:bg-[#e01f45] transition-colors">
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+            {flashLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} variant="horizontal" />
+                ))
+              : displayDeals.map((product) => (
+                  <ProductCard key={product.id} product={product} variant="horizontal" />
+                ))}
           </div>
         </section>
 
+        {/* Trending */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-white font-bold text-base">🔥 Trending</h2>
@@ -189,34 +128,30 @@ export default function ShopPage() {
               See all <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {TRENDING_PRODUCTS.map((product) => (
-              <Link key={product.id} href={`/shop/product/${product.id}`}>
-                <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/10 active:scale-95 transition-transform">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full aspect-square object-cover"
-                  />
-                  <div className="p-2.5 space-y-1">
-                    <p className="text-white text-xs font-medium line-clamp-2 leading-tight">
-                      {product.name}
-                    </p>
-                    <p className="text-white/40 text-[10px]">{product.store}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white font-bold text-sm">
-                        {formatPrice(product.price)}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                        <span className="text-white/50 text-xs">{product.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
+          {trendingLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : trending.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {trending.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <p className="text-white/40 text-sm">No products yet</p>
+              <Link
+                href="/create"
+                className="bg-[#FE2C55] text-white text-sm font-bold px-4 py-2 rounded-full hover:bg-[#e01f45] transition-colors"
+              >
+                List your first product
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
         </section>
       </div>
     </div>
