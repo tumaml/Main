@@ -19,7 +19,8 @@ const config: Config = {
         'surface-2': '#2a2a2a',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', 'Noto Sans Arabic', 'system-ui', '-apple-system', 'sans-serif'],
+        arabic: ['Noto Sans Arabic', 'system-ui', 'sans-serif'],
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',

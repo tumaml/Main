@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { X, Send, Heart } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/avatar'
+import { Skeleton } from '@/components/shared/skeleton'
 import { Comment } from '@/types/database'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,12 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
   const [isLoading, setIsLoading] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+
+  const handleReply = (username: string) => {
+    setReplyingTo(username)
+    setNewComment(`@${username} `)
+  }
 
   useEffect(() => {
     if (!isOpen) return
@@ -46,8 +52,11 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
       if (data.comment) {
         setComments((prev) => [data.comment, ...prev])
         setNewComment('')
+        setReplyingTo(null)
       }
-    } catch {}
+    } catch {
+      // Silent — comment failed
+    }
     setIsSubmitting(false)
   }
 
@@ -81,7 +90,10 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
         </div>
 
         {/* Comments list */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4" style={{ height: 'calc(70dvh - 120px)' }}>
+        <div
+          className="flex-1 overflow-y-auto px-4 py-3 space-y-4"
+          style={{ height: 'calc(70dvh - 120px)' }}
+        >
           {isLoading
             ? Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex gap-3">
@@ -94,17 +106,28 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
                 </div>
               ))
             : comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} />
+                <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
               ))}
           {!isLoading && comments.length === 0 && (
-            <p className="text-center text-white/40 text-sm mt-8">
-              Be the first to comment!
-            </p>
+            <p className="text-center text-white/40 text-sm mt-8">Be the first to comment!</p>
           )}
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-white/10 flex gap-3">
+        <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-white/10 flex flex-col gap-2">
+          {replyingTo && (
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <span>Replying to @{replyingTo}</span>
+              <button
+                type="button"
+                onClick={() => { setReplyingTo(null); setNewComment('') }}
+                className="text-white/40 hover:text-white/70"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          <div className="flex gap-3">
           <input
             type="text"
             value={newComment}
@@ -119,32 +142,61 @@ export function CommentSheet({ videoId, commentCount, isOpen, onClose }: Comment
           >
             <Send className="w-4 h-4 text-white" />
           </button>
+          </div>
         </form>
       </div>
     </>
   )
 }
 
-function CommentItem({ comment }: { comment: Comment }) {
+function CommentItem({
+  comment,
+  onReply,
+}: {
+  comment: Comment
+  onReply: (username: string) => void
+}) {
   const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(comment.like_count)
+
+  const handleLike = async () => {
+    const next = !liked
+    setLiked(next)
+    setLikeCount((c) => c + (next ? 1 : -1))
+    try {
+      await fetch(`/api/comments/${comment.id}/like`, { method: 'POST' })
+    } catch {
+      // Revert on failure
+      setLiked(!next)
+      setLikeCount((c) => c + (next ? -1 : 1))
+    }
+  }
+
   return (
     <div className="flex gap-3">
       <Avatar className="w-9 h-9 flex-shrink-0">
-        <AvatarImage src={comment.user?.avatar_url || ''} />
+        <AvatarImage src={comment.user?.avatar_url ?? ''} />
         <AvatarFallback>{comment.user?.username?.[0]?.toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <span className="text-white font-semibold text-xs mr-1">@{comment.user?.username}</span>
+          <div className="flex-1 min-w-0">
+            <span className="text-white font-semibold text-xs mr-1">
+              @{comment.user?.username}
+            </span>
             <p className="text-white/90 text-sm leading-relaxed">{comment.content}</p>
             <div className="flex gap-3 mt-1">
               <span className="text-white/40 text-xs">{timeAgo(comment.created_at)}</span>
-              <button className="text-white/40 text-xs hover:text-white/70">Reply</button>
+              <button
+                onClick={() => onReply(comment.user?.username ?? '')}
+                className="text-white/40 text-xs hover:text-white/70"
+              >
+                Reply
+              </button>
             </div>
           </div>
           <button
-            onClick={() => setLiked(!liked)}
+            onClick={handleLike}
             className="flex flex-col items-center gap-0.5 flex-shrink-0 pt-0.5"
           >
             <Heart
@@ -153,9 +205,7 @@ function CommentItem({ comment }: { comment: Comment }) {
                 liked ? 'fill-[#FE2C55] text-[#FE2C55]' : 'text-white/50'
               )}
             />
-            <span className="text-white/40 text-[10px]">
-              {formatCount(comment.like_count + (liked ? 1 : 0))}
-            </span>
+            <span className="text-white/40 text-[10px]">{formatCount(likeCount)}</span>
           </button>
         </div>
       </div>

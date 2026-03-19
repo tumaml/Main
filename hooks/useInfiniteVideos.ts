@@ -2,15 +2,18 @@
 
 import { useState, useCallback } from 'react'
 import { Video } from '@/types/database'
+import type { FeedTab, FeedFilter } from '@/components/shared/FeedHeader'
 
 interface UseInfiniteVideosOptions {
-  tab?: 'fyp' | 'following'
+  tab?: FeedTab
+  filter?: FeedFilter
   userId?: string
   initialVideos?: Video[]
 }
 
 export function useInfiniteVideos({
   tab = 'fyp',
+  filter = 'all',
   userId,
   initialVideos = [],
 }: UseInfiniteVideosOptions = {}) {
@@ -27,17 +30,22 @@ export function useInfiniteVideos({
       const params = new URLSearchParams({ tab, limit: '10' })
       if (cursor) params.set('cursor', cursor)
       if (userId) params.set('userId', userId)
+      if (filter === 'product') params.set('type', 'product')
+      if (filter === 'service') params.set('type', 'service')
+      if (filter === 'under10') params.set('max_price', '1000')
+      if (filter === 'used') params.set('condition', 'used')
+      if (filter === 'new') params.set('condition', 'new')
 
       const res = await fetch(`/api/videos?${params}`)
-      const data = await res.json()
+      const data = await res.json() as { videos?: Video[]; nextCursor?: string | null }
 
-      if (data.videos?.length > 0) {
+      if (data.videos && data.videos.length > 0) {
         setVideos((prev) => {
           const existingIds = new Set(prev.map((v) => v.id))
-          const newVideos = data.videos.filter((v: Video) => !existingIds.has(v.id))
+          const newVideos = data.videos!.filter((v) => !existingIds.has(v.id))
           return [...prev, ...newVideos]
         })
-        setCursor(data.nextCursor)
+        setCursor(data.nextCursor ?? null)
         setHasMore(!!data.nextCursor)
       } else {
         setHasMore(false)
@@ -47,7 +55,7 @@ export function useInfiniteVideos({
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, hasMore, cursor, tab, userId])
+  }, [isLoading, hasMore, cursor, tab, filter, userId])
 
   const reset = useCallback(() => {
     setVideos([])

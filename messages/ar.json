@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "discover": "اكتشف",
+    "upload": "نشر",
+    "shop": "المتجر",
+    "profile": "الملف الشخصي",
+    "inbox": "الرسائل"
+  },
+  "feed": {
+    "forYou": "لك",
+    "following": "المتابَعون",
+    "friends": "الأصدقاء",
+    "nearby": "قريب منك"
+  },
+  "filters": {
+    "all": "الكل",
+    "products": "منتجات",
+    "services": "خدمات",
+    "under10": "أقل من ١٠ د.أ",
+    "used": "مستعمل",
+    "new": "جديد"
+  },
+  "actions": {
+    "like": "إعجاب",
+    "comment": "تعليق",
+    "share": "مشاركة",
+    "save": "حفظ",
+    "addToCart": "أضف للسلة",
+    "bookNow": "احجز الآن",
+    "contactSeller": "تواصل مع البائع",
+    "verifiedSeller": "بائع موثّق",
+    "follow": "متابعة",
+    "following": "تتابعه",
+    "unfollow": "إلغاء المتابعة"
+  },
+  "upload": {
+    "postVideo": "نشر إعلان",
+    "selectVideo": "اختر مقطع فيديو",
+    "caption": "وصف",
+    "title": "العنوان",
+    "description": "التفاصيل",
+    "price": "السعر",
+    "category": "الفئة",
+    "condition": "الحالة",
+    "new": "جديد",
+    "used": "مستعمل",
+    "refurbished": "مجدَّد",
+    "product": "بيع منتج",
+    "service": "تقديم خدمة",
+    "privacy": "من يرى هذا الإعلان",
+    "everyone": "الجميع",
+    "friends": "الأصدقاء",
+    "onlyMe": "أنا فقط",
+    "hashtags": "الوسوم",
+    "inventory": "الكمية المتاحة",
+    "location": "الموقع",
+    "posting": "جارٍ النشر..."
+  },
+  "shop": {
+    "flashDeals": "عروض محدودة",
+    "trending": "الأكثر رواجاً",
+    "seeAll": "عرض الكل",
+    "addToCart": "أضف للسلة",
+    "sold": "مبيعاً",
+    "rating": "التقييم",
+    "noProducts": "لا توجد منتجات بعد",
+    "listFirst": "أضف أول منتج"
+  },
+  "search": {
+    "placeholder": "ابحث عن فيديوهات، مستخدمين...",
+    "cancel": "إلغاء",
+    "noResults": "لا نتائج لـ",
+    "accounts": "الحسابات",
+    "videos": "فيديوهات",
+    "products": "منتجات",
+    "users": "مستخدمون",
+    "top": "الأبرز",
+    "hashtags": "الوسوم"
+  },
+  "comments": {
+    "beFirst": "كن أول من يعلّق!",
+    "addComment": "أضف تعليقاً...",
+    "replyingTo": "ردًّا على"
+  }
+}

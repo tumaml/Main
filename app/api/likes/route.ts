@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const { data: user } = await supabase.from('users').select('id').eq('clerk_id', clerkId).single()
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  await supabase.from('likes').insert({ user_id: (user as any).id, video_id: videoId })
+  await supabase.from('video_likes').insert({ user_id: (user as any).id, video_id: videoId })
 
   return NextResponse.json({ success: true })
 }
@@ -28,7 +28,7 @@ export async function DELETE(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   await supabase
-    .from('likes')
+    .from('video_likes')
     .delete()
     .eq('user_id', (user as any).id)
     .eq('video_id', videoId)

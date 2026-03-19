@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { Video } from '@/types/database'
+import type { FeedTab, FeedFilter } from '@/components/shared/FeedHeader'
 
-// Seed videos used for initial render before Supabase loads
+// Seed videos — shown until Supabase responds (or when env vars aren't configured)
 export const SEED_VIDEOS: Video[] = [
   {
     id: '30000000-0000-0000-0000-000000000001',
     user_id: '00000000-0000-0000-0000-000000000001',
-    title: null,
     caption: 'Exploring the hidden gems of Tokyo 🇯🇵✨ Drop a 🗾 if you want a full guide! #travel #japan #fyp #viral',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnail_url: 'https://picsum.photos/seed/tokyo/1080/1920',
     duration: 15,
     width: 1080,
@@ -20,14 +20,20 @@ export const SEED_VIDEOS: Video[] = [
     share_count: 18900,
     view_count: 1250000,
     bookmark_count: 12000,
-    status: 'ready',
     privacy: 'public',
     allow_comments: true,
     allow_duet: true,
     allow_stitch: true,
     is_pinned: false,
-    scheduled_at: null,
-    published_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    sound_id: null,
+    tags: [],
+    listing_type: null,
+    title: null,
+    price: null,
+    currency: null,
+    condition: null,
+    location: null,
+    linked_product: null,
     created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
     updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
     user: {
@@ -37,7 +43,9 @@ export const SEED_VIDEOS: Video[] = [
       display_name: 'Alex Creates',
       avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
       bio: 'Content creator 🎬 | Travel & Food',
-      website: null,
+      website_url: null,
+      coin_balance: 0,
+      interests: [],
       is_verified: true,
       is_seller: false,
       follower_count: 128500,
@@ -53,9 +61,8 @@ export const SEED_VIDEOS: Video[] = [
   {
     id: '30000000-0000-0000-0000-000000000002',
     user_id: '00000000-0000-0000-0000-000000000002',
-    title: null,
     caption: 'GRWM for New York Fashion Week 👗💅 This look took 2 hours but SO worth it! #fashion #grwm #nyfw #style',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnail_url: 'https://picsum.photos/seed/fashion/1080/1920',
     duration: 28,
     width: 1080,
@@ -65,14 +72,43 @@ export const SEED_VIDEOS: Video[] = [
     share_count: 12400,
     view_count: 890000,
     bookmark_count: 8900,
-    status: 'ready',
     privacy: 'public',
     allow_comments: true,
     allow_duet: true,
     allow_stitch: true,
     is_pinned: false,
-    scheduled_at: null,
-    published_at: new Date(Date.now() - 86400000).toISOString(),
+    sound_id: null,
+    tags: [],
+    listing_type: 'product',
+    title: 'Y2K Butterfly Crop Top',
+    price: 1799,
+    currency: 'JOD',
+    condition: 'new',
+    location: null,
+    linked_product: {
+      id: 'demo-product-2',
+      seller_id: '00000000-0000-0000-0000-000000000002',
+      title: 'Y2K Butterfly Crop Top',
+      description: 'Channel Y2K vibes with this butterfly-print crop top.',
+      price: 1799,
+      compare_price: 2999,
+      currency: 'JOD',
+      inventory: 50,
+      images: ['https://picsum.photos/seed/top1/600/600'],
+      category: 'Fashion',
+      tags: ['fashion', 'y2k'],
+      is_active: true,
+      is_digital: false,
+      rating: 4.7,
+      review_count: 187,
+      sold_count: 892,
+      stripe_price_id: null,
+      listing_type: 'product',
+      condition: 'new',
+      location: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
     created_at: new Date(Date.now() - 86400000).toISOString(),
     updated_at: new Date(Date.now() - 86400000).toISOString(),
     user: {
@@ -82,7 +118,9 @@ export const SEED_VIDEOS: Video[] = [
       display_name: 'Sarah Style',
       avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
       bio: 'Fashion & Beauty 💄 | New York',
-      website: null,
+      website_url: null,
+      coin_balance: 0,
+      interests: [],
       is_verified: true,
       is_seller: true,
       follower_count: 89200,
@@ -98,9 +136,8 @@ export const SEED_VIDEOS: Video[] = [
   {
     id: '30000000-0000-0000-0000-000000000003',
     user_id: '00000000-0000-0000-0000-000000000003',
-    title: null,
     caption: 'This $30 gadget from Amazon is actually INSANE 🤯 Link in bio! #tech #gadgets #amazon #fyp',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnail_url: 'https://picsum.photos/seed/tech/1080/1920',
     duration: 22,
     width: 1080,
@@ -110,14 +147,43 @@ export const SEED_VIDEOS: Video[] = [
     share_count: 8700,
     view_count: 456000,
     bookmark_count: 4500,
-    status: 'ready',
     privacy: 'public',
     allow_comments: true,
     allow_duet: true,
     allow_stitch: true,
     is_pinned: false,
-    scheduled_at: null,
-    published_at: new Date(Date.now() - 3600000).toISOString(),
+    sound_id: null,
+    tags: [],
+    listing_type: 'product',
+    title: 'Portable LED Ring Light',
+    price: 1299,
+    currency: 'JOD',
+    condition: 'new',
+    location: null,
+    linked_product: {
+      id: 'demo-product-3',
+      seller_id: '00000000-0000-0000-0000-000000000003',
+      title: 'Portable LED Ring Light',
+      description: '10-inch portable ring light, 3200K–5500K, includes phone holder.',
+      price: 1299,
+      compare_price: 2499,
+      currency: 'JOD',
+      inventory: 120,
+      images: ['https://picsum.photos/seed/led1/600/600'],
+      category: 'Electronics',
+      tags: ['creator', 'tech'],
+      is_active: true,
+      is_digital: false,
+      rating: 4.6,
+      review_count: 412,
+      sold_count: 1203,
+      stripe_price_id: null,
+      listing_type: 'product',
+      condition: 'new',
+      location: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
     created_at: new Date(Date.now() - 3600000).toISOString(),
     updated_at: new Date(Date.now() - 3600000).toISOString(),
     user: {
@@ -127,7 +193,9 @@ export const SEED_VIDEOS: Video[] = [
       display_name: 'Tech With Tom',
       avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tom',
       bio: 'Tech reviews & gadgets 💻',
-      website: null,
+      website_url: null,
+      coin_balance: 0,
+      interests: [],
       is_verified: false,
       is_seller: false,
       follower_count: 45000,
@@ -140,26 +208,139 @@ export const SEED_VIDEOS: Video[] = [
     is_liked: false,
     is_bookmarked: false,
   },
+  {
+    id: '30000000-0000-0000-0000-000000000004',
+    user_id: '00000000-0000-0000-0000-000000000004',
+    caption: 'Homemade spicy ramen from scratch 🍜🔥 Full recipe in comments! #cooking #ramen #foodtok #fyp',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    thumbnail_url: 'https://picsum.photos/seed/ramen/1080/1920',
+    duration: 45,
+    width: 1080,
+    height: 1920,
+    like_count: 312000,
+    comment_count: 7890,
+    share_count: 24100,
+    view_count: 2100000,
+    bookmark_count: 18900,
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    sound_id: null,
+    tags: [],
+    listing_type: 'service',
+    title: 'Private Cooking Class',
+    price: 4500,
+    currency: 'JOD',
+    condition: null,
+    location: 'Amman, Jordan',
+    linked_product: null,
+    created_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000004',
+      clerk_id: 'user_demo4',
+      username: 'chefmaria',
+      display_name: 'Chef Maria',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=maria',
+      bio: 'Home cooking made easy 🍳 | Tokyo',
+      website_url: null,
+      coin_balance: 0,
+      interests: [],
+      is_verified: true,
+      is_seller: false,
+      follower_count: 234000,
+      following_count: 890,
+      video_count: 312,
+      like_count: 8900000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000005',
+    user_id: '00000000-0000-0000-0000-000000000005',
+    caption: 'POV: you found the best hiking trail in Colorado 🏔️⛰️ #hiking #outdoors #colorado #adventure',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    thumbnail_url: 'https://picsum.photos/seed/hiking/1080/1920',
+    duration: 33,
+    width: 1080,
+    height: 1920,
+    like_count: 156700,
+    comment_count: 4230,
+    share_count: 15800,
+    view_count: 980000,
+    bookmark_count: 9200,
+    privacy: 'public',
+    allow_comments: true,
+    allow_duet: true,
+    allow_stitch: true,
+    is_pinned: false,
+    sound_id: null,
+    tags: [],
+    listing_type: null,
+    title: null,
+    price: null,
+    currency: null,
+    condition: null,
+    location: null,
+    linked_product: null,
+    created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+    user: {
+      id: '00000000-0000-0000-0000-000000000005',
+      clerk_id: 'user_demo5',
+      username: 'hikingwithkate',
+      display_name: 'Hiking With Kate',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kate',
+      bio: 'Adventure seeker 🏔️ | Colorado',
+      website_url: null,
+      coin_balance: 0,
+      interests: [],
+      is_verified: false,
+      is_seller: false,
+      follower_count: 67800,
+      following_count: 412,
+      video_count: 145,
+      like_count: 3400000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    is_liked: false,
+    is_bookmarked: false,
+  },
 ]
 
-export function useFeedVideos(tab: 'fyp' | 'following') {
+export function useFeedVideos(tab: FeedTab, filter: FeedFilter = 'all') {
   const [videos, setVideos] = useState<Video[]>(SEED_VIDEOS)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    if (tab === 'friends' || tab === 'local') {
+      setVideos([])
+      return
+    }
+
     setIsLoading(true)
-    fetch(`/api/videos?tab=${tab}&limit=10`)
+    const params = new URLSearchParams({ tab, limit: '10' })
+    if (filter === 'product') params.set('type', 'product')
+    if (filter === 'service') params.set('type', 'service')
+    if (filter === 'under10') params.set('max_price', '1000')
+    if (filter === 'used') params.set('condition', 'used')
+    if (filter === 'new') params.set('condition', 'new')
+
+    fetch(`/api/videos?${params}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.videos?.length > 0) {
-          setVideos(data.videos)
-        }
+        if (data.videos?.length > 0) setVideos(data.videos)
+        // keep seed if empty (no Supabase configured yet)
       })
-      .catch(() => {
-        // Keep seed videos if API fails (e.g., no Supabase configured yet)
-      })
+      .catch(() => {})
       .finally(() => setIsLoading(false))
-  }, [tab])
+  }, [tab, filter])
 
   return { videos, isLoading }
 }

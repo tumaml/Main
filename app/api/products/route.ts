@@ -4,23 +4,30 @@ import { auth } from '@clerk/nextjs/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const category = searchParams.get('category')
-  const storeId = searchParams.get('storeId')
-  const cursor = searchParams.get('cursor')
-  const limit = 20
+  const category     = searchParams.get('category')
+  const q            = searchParams.get('q')
+  const sort         = searchParams.get('sort') || 'trending'
+  const listingType  = searchParams.get('listing_type')
+  const limit        = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
+  const cursor       = searchParams.get('cursor')
 
   const supabase = createServerSupabase()
 
-  let query = supabase
+  const orderCol = sort === 'newest' ? 'created_at' : sort === 'price_asc' || sort === 'price_desc' ? 'price' : 'sold_count'
+  const ascending = sort === 'price_asc'
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
     .from('products')
-    .select('*, store:stores(id, name, logo_url, is_verified, rating)')
+    .select('*, seller:users(id, username, display_name, avatar_url), store:stores(id, name, logo_url, rating)')
     .eq('is_active', true)
-    .order('sold_count', { ascending: false })
+    .order(orderCol, { ascending })
     .limit(limit + 1)
 
-  if (category) query = (query as any).eq('category', category)
-  if (storeId) query = (query as any).eq('store_id', storeId)
-  if (cursor) query = (query as any).lt('sold_count', parseInt(cursor))
+  if (category && category !== 'All') query = query.eq('category', category)
+  if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+  if (listingType) query = query.eq('listing_type', listingType)
+  if (cursor) query = query.lt(orderCol, cursor)
 
   const { data: products, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -28,10 +35,7 @@ export async function GET(request: NextRequest) {
   const hasMore = (products?.length || 0) > limit
   const sliced = hasMore ? products!.slice(0, limit) : products || []
 
-  return NextResponse.json({
-    products: sliced,
-    nextCursor: hasMore ? (sliced[sliced.length - 1] as any)?.sold_count : null,
-  })
+  return NextResponse.json({ products: sliced, hasMore })
 }
 
 export async function POST(request: NextRequest) {
@@ -39,29 +43,43 @@ export async function POST(request: NextRequest) {
   if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const supabase = createServerSupabase()
-  const body = await request.json()
 
-  const { data: user } = await supabase.from('users').select('id').eq('clerk_id', clerkId).single()
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  const { data: me } = await supabase.from('users').select('id').eq('clerk_id', clerkId).single()
+  if (!me) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  const { data: store } = await supabase
-    .from('stores').select('id').eq('user_id', (user as any).id).single()
-  if (!store) {
-    return NextResponse.json({ error: 'No store found. Please set up your store first.' }, { status: 400 })
+  const body = await request.json() as {
+    title: string
+    description?: string
+    price: number
+    currency?: string
+    category?: string
+    listingType?: 'product' | 'service'
+    condition?: 'new' | 'used' | 'refurbished'
+    inventory?: number
+    images?: string[]
+  }
+
+  if (!body.title || !body.price) {
+    return NextResponse.json({ error: 'title and price required' }, { status: 400 })
   }
 
   const { data: product, error } = await supabase
     .from('products')
     .insert({
-      store_id: (store as any).id,
-      name: body.name,
-      description: body.description || '',
-      price: body.price,
-      sale_price: body.salePrice || null,
-      images: body.images || [],
-      category: body.category || 'other',
-      inventory: body.inventory || 0,
-    } as any)
+      seller_id:    (me as { id: string }).id,
+      title:        body.title,
+      description:  body.description ?? null,
+      price:        body.price,
+      currency:     body.currency ?? 'JOD',
+      category:     body.category ?? null,
+      listing_type: body.listingType ?? 'product',
+      condition:    body.condition ?? 'new',
+      inventory:    body.inventory ?? 0,
+      images:       body.images ?? [],
+      is_active:    true,
+      is_digital:   false,
+      tags:         [],
+    } as never)
     .select()
     .single()
 

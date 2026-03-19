@@ -65,10 +65,10 @@ export const useCartStore = create<CartState>()(
       totalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
       totalPrice: () =>
         get().items.reduce((sum, i) => {
-          const price = i.product.sale_price ?? i.product.price
+          const price = i.product.compare_price != null ? Math.min(i.product.price, i.product.compare_price) : i.product.price
           return sum + price * i.quantity
         }, 0),
     }),
-    { name: 'demo-cart' }
+    { name: 'mezan-cart' }
   )
 )

@@ -1,6 +1,6 @@
 {
-  "name": "Demo",
-  "short_name": "Demo",
+  "name": "Mezan",
+  "short_name": "Mezan",
   "description": "Short videos. Shop your favorites.",
   "start_url": "/",
   "display": "standalone",

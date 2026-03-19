@@ -78,10 +78,15 @@ export function useVideoPlayer(videoId: string) {
   }
 }
 
-export function useVideoInteractions(videoId: string, initialLiked = false, initialLikeCount = 0) {
+export function useVideoInteractions(
+  videoId: string,
+  initialLiked = false,
+  initialLikeCount = 0,
+  initialBookmarked = false
+) {
   const [isLiked, setIsLiked] = useState(initialLiked)
   const [likeCount, setLikeCount] = useState(initialLikeCount)
-  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(initialBookmarked)
 
   const toggleLike = useCallback(async () => {
     // Optimistic update
@@ -117,4 +122,26 @@ export function useVideoInteractions(videoId: string, initialLiked = false, init
   }, [videoId, isBookmarked])
 
   return { isLiked, likeCount, isBookmarked, toggleLike, toggleBookmark }
+}
+
+export function useFollow(targetUserId: string | undefined, initialFollowing = false) {
+  const [isFollowing, setIsFollowing] = useState(initialFollowing)
+
+  const toggleFollow = useCallback(async () => {
+    if (!targetUserId) return
+    const prev = isFollowing
+    setIsFollowing(!prev)
+    try {
+      const method = prev ? 'DELETE' : 'POST'
+      await fetch('/api/follows', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId }),
+      })
+    } catch {
+      setIsFollowing(prev)
+    }
+  }, [targetUserId, isFollowing])
+
+  return { isFollowing, toggleFollow }
 }

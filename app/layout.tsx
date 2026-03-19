@@ -1,19 +1,21 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from 'react-hot-toast'
+import { QueryProvider } from '@/components/shared/QueryProvider'
+import { LocaleProvider } from '@/components/shared/LocaleProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Demo — Short Videos & Shop',
+  title: 'Mezan — Short Videos & Shop',
   description: 'Discover short-form videos and shop your favorite creator products.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Demo',
+    title: 'Mezan',
   },
   openGraph: {
-    title: 'Demo',
+    title: 'Mezan',
     description: 'Short videos. Shop your favorite creators.',
     type: 'website',
   },
@@ -31,9 +33,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
+      <QueryProvider>
       <html lang="en" className="dark">
         <body className="font-sans bg-black text-white antialiased">
+          <LocaleProvider>
           {children}
+          </LocaleProvider>
           <Toaster
             position="top-center"
             toastOptions={{
@@ -46,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         </body>
       </html>
+      </QueryProvider>
     </ClerkProvider>
   )
 }

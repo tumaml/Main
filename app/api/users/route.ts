@@ -45,11 +45,43 @@ export async function PUT(request: NextRequest) {
   if (username) updates.username = username
   if (displayName) updates.display_name = displayName
   if (bio !== undefined) updates.bio = bio
-  if (website !== undefined) updates.website = website
+  if (website !== undefined) updates.website_url = website
   if (avatarUrl) updates.avatar_url = avatarUrl
 
   const { data: user, error } = await supabase
     .from('users')
+    .update(updates as any)
+    .eq('clerk_id', clerkId)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ user })
+}
+
+// PATCH — lightweight update for specific fields (e.g. interests from onboarding)
+export async function PATCH(request: NextRequest) {
+  const { userId: clerkId } = await auth()
+  if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = createServerSupabase()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body = await request.json() as Record<string, any>
+
+  // Allow only safe fields via PATCH
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updates: Record<string, any> = {}
+  if (Array.isArray(body.interests)) updates.interests = body.interests
+  if (typeof body.username === 'string') updates.username = body.username
+  if (typeof body.bio === 'string') updates.bio = body.bio
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
+  const { data: user, error } = await supabase
+    .from('users')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .update(updates as any)
     .eq('clerk_id', clerkId)
     .select()
